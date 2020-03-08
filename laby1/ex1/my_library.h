@@ -20,11 +20,6 @@ struct File_pair {
     FILE second;
 };
 
-struct File_pair_array {
-    struct File_pair* files;
-    int size;
-};
-
 struct Main_array create_array(int size);
 struct File_pair create_file_pair(FILE first, FILE second);
 char* compare_files(struct File_pair pair);

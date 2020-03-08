@@ -1,8 +1,13 @@
 #include "my_library.h"
 
-int size = 140;
+int command_size = 256;
 
 struct Main_array create_array(int size){
+    if(size <= 0){
+        fprintf(stderr, "Argument size must be >= 0");
+        exit(1);
+    }
+
     struct Main_array array;
 
     array.blocks = (struct Block*) calloc(size, sizeof(struct Block));
@@ -21,5 +26,5 @@ struct File_pair create_file_pair(FILE first, FILE second){
 }
 
 char* compare_files(struct File_pair pair){
-    
+    char* command = calloc(command_size, sizeof(char));
 }
