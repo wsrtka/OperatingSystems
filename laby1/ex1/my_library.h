@@ -27,6 +27,6 @@ char* compare_files(struct File_pair pair);
 int create_block(struct Main_array arr, char* tmp_filename);
 int get_operations_amount(struct Block block);
 bool delete_block(struct Main_array arr, int id);
-bool delete_operation(struct Block block, char* operation);
+bool delete_operation(struct Block block, int id);
 
 #endif
