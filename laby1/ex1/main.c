@@ -89,7 +89,8 @@ int main(int argc, char** argv){
                 error("Invalid argument: should be of type int");
             }
 
-            
+            printf("Proceeding to remove operation no. %d from block no. %d", argv[i+1], argv[i+2]);
+            delete_operation(array, argv[i+1], argv[i+2]);
 
             i += 3;
         }
