@@ -150,3 +150,8 @@ int lines_count(FILE* filename){
 
     return lines;
 }
+
+void error(char* message){
+    fprintf(stderr, message);
+    exit(0);
+}
