@@ -114,22 +114,28 @@ bool delete_block(struct Main_array arr, int id){
     return true;
 }
 
-bool delete_operation(struct Block block, int id){
-    if(id > block.size){
+bool delete_operation(struct Main_array array, int block_id, int operation_id){
+    if(block_id > array.size){
+        error("Invalid block id");
+    }
+
+    struct Block* block = array.blocks[block_id];
+
+    if(operation_id > block->size){
         fprintf(stderr, "invalid operation index");
         exit(1);
     }
 
-    free(block.operations[id]);
+    free(block->operations[operation_id]);
 
-    if(id < block.size){
-        for(int i = id; i < block.size; i++){
-            block.operations[i] = realloc(block.operations[i], sizeof(block.operations[i+1]));
-            strcpy(block.operations[i], block.operations[i+1]);
+    if(operation_id < block->size){
+        for(int i = operation_id; i < block->size; i++){
+            block->operations[i] = realloc(block->operations[i], sizeof(block->operations[i+1]));
+            strcpy(block->operations[i], block->operations[i+1]);
         }
     }
 
-    block.size--;
+    block->size--;
 
     return true;
 }
