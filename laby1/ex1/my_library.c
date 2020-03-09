@@ -56,6 +56,7 @@ int create_block(struct Main_array arr, char* tmp_filename){
     int file_lines = lines_count(tmp_file);
     
     struct Block result;
+    struct Block* result_ptr = &result;
     result.size = -1;
     result.operations = (char*) calloc(file_lines/2, sizeof(char*));
 
@@ -74,11 +75,44 @@ int create_block(struct Main_array arr, char* tmp_filename){
             operation_length += len;
             result.operations[result.size] = realloc(result.operations[result.size], operation_length*sizeof(char));
         }
+
         strcpy(result.operations[result.size], line);
     }
+
+    arr.blocks[arr.size] = result_ptr;
+    arr.size++;
+
+    return arr.size-1;
 }
 
+int get_operations_amount(struct Block block){
+    return block.size;
+}
 
+bool delete_block(struct Main_array arr, int id){
+    struct Block* block = arr.blocks[id];
+
+    for(int i = 0; i < block->size; i++){
+        free(block->operations[i]);
+    }
+
+    free(arr.blocks[id]);
+
+    if(id < arr.size - 1){
+        struct Block* prev = arr.blocks[id];
+        struct Block* next = arr.blocks[id+1];
+
+        for(int i = id; i < arr.size - 1; i++){
+            arr.blocks[i] = arr.blocks[i+1];
+        }
+
+        arr.blocks[arr.size - 1] = NULL;
+    }
+
+    arr.size--;
+
+    return true;
+}
 
 int lines_count(FILE* filename){
     if(filename == NULL){
