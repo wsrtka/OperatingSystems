@@ -74,11 +74,24 @@ int main(int argc, char** argv){
         }
         else if(strcpm(argv[i], "remove_block") == 0)
         {
-            
+            if(!isNumber(argv[i+1])){
+                error("Invalid argument: should be of type int");
+            }
+
+            printf("Proceeding to remove block no. %d", argv[i+1]);
+            delete_block(array, argv[i+1]);
+
+            i += 2;
         }
         else if(strcpm(argv[i], "remove_operation") == 0)
         {
+            if(!isNumber(argv[i+1]) || !isNumber(argv[i+2])){
+                error("Invalid argument: should be of type int");
+            }
+
             
+
+            i += 3;
         }
         else
         {
