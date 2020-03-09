@@ -16,12 +16,12 @@ struct Main_array {
 };
 
 struct File_pair {
-    FILE first;
-    FILE second;
+    char* first;
+    char* second;
 };
 
 struct Main_array create_array(int size);
-struct File_pair create_file_pair(FILE first, FILE second);
+struct File_pair create_file_pair(char* first, char* second);
 char* compare_files(struct File_pair pair);
 bool save_to_temp_file(char* text);
 int create_block(struct Main_array arr, FILE temp_file);
