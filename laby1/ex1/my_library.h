@@ -6,7 +6,7 @@
 #include <string.h>
 
 struct Block {
-    char* operations;
+    char** operations;
     int size;
 };
 

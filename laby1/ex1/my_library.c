@@ -43,5 +43,34 @@ char* compare_files(struct File_pair pair){
 }
 
 int create_block(struct Main_array arr, char* tmp_filename){
+    FILE* tmp_file = fopen(tmp_filename, "r");
+    if(tmp_file == NULL){
+        fprintf(stderr, "Could not open temporary file");
+        exit(1);
+    }
+
+    fseek(tmp_file, 0, SEEK_END);
+    long file_length = ftell(tmp_file);
+    fseek(tmp_file, 0, SEEK_SET);
+
     
+}
+
+
+
+int lines_count(FILE* filename){
+    if(filename == NULL){
+        return 0;
+    }
+
+    int lines = 0;
+    char ch;
+    while(!feof(filename)){
+        ch = fgetc(filename);
+        if(ch == '\n'){
+            lines++;
+        }
+    }
+
+    return lines;
 }
