@@ -53,7 +53,29 @@ int create_block(struct Main_array arr, char* tmp_filename){
     long file_length = ftell(tmp_file);
     fseek(tmp_file, 0, SEEK_SET);
 
+    int file_lines = lines_count(tmp_file);
     
+    struct Block result;
+    result.size = -1;
+    result.operations = (char*) calloc(file_lines/2, sizeof(char*));
+
+    char* line = NULL;
+    size_t len = 0;
+    int operation_length;
+
+    while(getline(&line, &len, tmp_file) != -1){
+        if(isdigit(atoi(line[0]))){
+            operation_length = 0;
+            result.size++;
+            result.operations[result.size] = calloc(len, sizeof(char));
+            operation_length += len;
+        }
+        else{
+            operation_length += len;
+            result.operations[result.size] = realloc(result.operations[result.size], operation_length*sizeof(char));
+        }
+        strcpy(result.operations[result.size], line);
+    }
 }
 
 
