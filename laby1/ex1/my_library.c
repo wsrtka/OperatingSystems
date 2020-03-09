@@ -16,7 +16,7 @@ struct Main_array create_array(int size){
     return array;
 }
 
-struct File_pair create_file_pair(FILE first, FILE second){
+struct File_pair create_file_pair(char* first, char* second){
     struct File_pair file_pair;
 
     file_pair.first = first;
@@ -27,4 +27,21 @@ struct File_pair create_file_pair(FILE first, FILE second){
 
 char* compare_files(struct File_pair pair){
     char* command = calloc(command_size, sizeof(char));
+
+    char* tmp_filename = tmpnam(NULL);
+
+    strcpy(command, "diff ");
+    strcpy(command, pair.first);
+    strcpy(command, " ");
+    strcpy(command, pair.second);
+    strcpy(command, " > ");
+    strcpy(command, tmp_filename);
+
+    system(command);
+
+    return tmp_filename;
+}
+
+int create_block(struct Main_array arr, char* tmp_filename){
+    
 }
