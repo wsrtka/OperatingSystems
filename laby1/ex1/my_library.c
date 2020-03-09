@@ -76,7 +76,7 @@ int create_block(struct Main_array arr, char* tmp_filename){
             result.operations[result.size] = realloc(result.operations[result.size], operation_length*sizeof(char));
         }
 
-        strcpy(result.operations[result.size], line);
+        strcat(result.operations[result.size], line);
     }
 
     arr.blocks[arr.size] = result_ptr;
@@ -110,6 +110,26 @@ bool delete_block(struct Main_array arr, int id){
     }
 
     arr.size--;
+
+    return true;
+}
+
+bool delete_operation(struct Block block, int id){
+    if(id > block.size){
+        fprintf(stderr, "invalid operation index");
+        exit(1);
+    }
+
+    free(block.operations[id]);
+
+    if(id < block.size){
+        for(int i = id; i < block.size; i++){
+            block.operations[i] = realloc(block.operations[i], sizeof(block.operations[i+1]));
+            strcpy(block.operations[i], block.operations[i+1]);
+        }
+    }
+
+    block.size--;
 
     return true;
 }
