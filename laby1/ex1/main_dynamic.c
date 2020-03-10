@@ -44,25 +44,32 @@ void* get_function_pointer(void* lib, char* function_name){
     void* function_pointer = dlsym(lib, function_name);
 
     if(function_pointer == NULL){
-        error("Cannot fetch function");
+        fptr_error("Cannot fetch function");
     }
 
     return function_pointer;
 }
 
 int main(int argc, char** argv){
-    if(argc < 2){
-        error("Invalid number of arguments");
-    }
-
     void* my_lib = dlopen("mylib.so", RTLD_LAZY);
-    if(my_lib == NULL){
-        error("Could not open library");
+
+    struct Main_array array;
+    struct Main_array (*fptr_create_array)() = (struct Main_array (*)())get_function_pointer(my_lib, "create_array");
+    struct File_pair (*fptr_create_file_pair)() = (struct File_pair (*)())get_function_pointer(my_lib, "create_file_pair");
+    char (*fptr_compare_files)() = (char* (*)())get_function_pointer(my_lib, "compare_files");
+    int (*fptr_create_block)() = (int (*)())get_function_pointer(my_lib, "create_block");
+    int (*fptr_get_operations_amount)() = (int (*)())get_function_pointer(my_lib, "get_operations_amount");
+    bool (*fptr_delete_block)() = (bool (*)())get_function_pointer(my_lib, "delete_block");
+    bool (*fptr_delete_operation)() = (bool (*)())get_function_pointer(my_lib, "delete_operation");
+    void (*fptr_error)() = (void (*)())get_function_pointer(my_lib, "error");
+
+    if(argc < 2){
+        fptr_error("Invalid number of arguments");
     }
 
     FILE* result_file = fopen("raport2.txt",'a');
     if(result_file == NULL){
-        error("Could not open result file");
+        fptr_error("Could not open result file");
     }
 
     struct tms* system_times[argc];
@@ -73,23 +80,13 @@ int main(int argc, char** argv){
     }
     int counter = 0;
 
-    struct Main_array array;
-    struct Main_array (*fptr_create_array)() = (struct Main_array (*)())get_function_pointer(my_lib, "create_array");
-    struct File_pair (*fptr_create_file_pair)() = (struct File_pair (*)())get_function_pointer(my_lib, "create_file_pair");
-    char (*fptr_compare_files)() = (char* (*)())get_function_pointer(my_lib, "compare_files");
-    int (*fptr_create_block)() = (int (*)())get_function_pointer(my_lib, "create_block");
-    int (*fptr_get_operations_amount)() = (int (*)())get_function_pointer(my_lib, "get_operations_amount");
-    bool (*fptr_delete_block) = (bool (*)())get_function_pointer(my_lib, "delete_block");
-    bool (*fptr_delete_operation) = (bool (*)())get_function_pointer(my_lib, "delete_operation");
-    void (*fptr_error) = (void (*)())get_function_pointer(my_lib, "error");
-
     for(int i = 1; i < argc; i++){
         user_time[counter] = times(system_times[counter]);
         counter++;
 
         if(strcpm(argv[i], "create_table") == 0){
             if(!isNumber(argv[i+1])){
-                error("Invalid argument: should be of type int");
+                fptr_error("Invalid argument: should be of type int");
             }
 
             printf("Creating table of size %d\n", argv[i+1]);
@@ -119,7 +116,7 @@ int main(int argc, char** argv){
                 }
 
                 if(strcpm(file1, "") == 0 || strcpm(file2, "") == 0){
-                    error("Wrong file name");
+                    fptr_error("Wrong file name");
                 }
 
                 strcpy(file2, input);
@@ -129,35 +126,35 @@ int main(int argc, char** argv){
                 free(file1);
                 free(file2);
 
-                char* tmp_filename = compare_files(pair);
-                printf("Created block number %d", create_block(array, tmp_filename));
+                char* tmp_filename = fptr_compare_files(pair);
+                printf("Created block number %d", create_block(&array, tmp_filename));
             }
         }
         else if(strcpm(argv[i], "remove_block") == 0)
         {
             if(!isNumber(argv[i+1])){
-                error("Invalid argument: should be of type int");
+                fptr_error("Invalid argument: should be of type int");
             }
 
             printf("Proceeding to remove block no. %d", argv[i+1]);
-            delete_block(array, argv[i+1]);
+            fptr_delete_block(&array, argv[i+1]);
 
             i += 2;
         }
         else if(strcpm(argv[i], "remove_operation") == 0)
         {
             if(!isNumber(argv[i+1]) || !isNumber(argv[i+2])){
-                error("Invalid argument: should be of type int");
+                fptr_error("Invalid argument: should be of type int");
             }
 
             printf("Proceeding to remove operation no. %d from block no. %d", argv[i+1], argv[i+2]);
-            delete_operation(array, argv[i+1], argv[i+2]);
+            fptr_delete_operation(&array, argv[i+1], argv[i+2]);
 
             i += 3;
         }
         else
         {
-            error("Invalid argument");
+            fptr_error("Invalid argument");
         }
         user_time[counter] = times(system_times[counter]);
 

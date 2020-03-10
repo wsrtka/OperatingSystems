@@ -42,7 +42,7 @@ char* compare_files(struct File_pair pair){
     return tmp_filename;
 }
 
-int create_block(struct Main_array arr, char* tmp_filename){
+int create_block(struct Main_array* arr, char* tmp_filename){
     FILE* tmp_file = fopen(tmp_filename, "r");
     if(tmp_file == NULL){
         fprintf(stderr, "Could not open temporary file");
@@ -79,47 +79,47 @@ int create_block(struct Main_array arr, char* tmp_filename){
         strcat(result.operations[result.size], line);
     }
 
-    arr.blocks[arr.size] = result_ptr;
-    arr.size++;
+    arr->blocks[arr->size] = result_ptr;
+    arr->size++;
 
-    return arr.size-1;
+    return arr->size-1;
 }
 
 int get_operations_amount(struct Block block){
     return block.size;
 }
 
-bool delete_block(struct Main_array arr, int id){
-    struct Block* block = arr.blocks[id];
+bool delete_block(struct Main_array* arr, int id){
+    struct Block* block = arr->blocks[id];
 
     for(int i = 0; i < block->size; i++){
         free(block->operations[i]);
     }
 
-    free(arr.blocks[id]);
+    free(arr->blocks[id]);
 
-    if(id < arr.size - 1){
-        struct Block* prev = arr.blocks[id];
-        struct Block* next = arr.blocks[id+1];
+    if(id < arr->size - 1){
+        struct Block* prev = arr->blocks[id];
+        struct Block* next = arr->blocks[id+1];
 
-        for(int i = id; i < arr.size - 1; i++){
-            arr.blocks[i] = arr.blocks[i+1];
+        for(int i = id; i < arr->size - 1; i++){
+            arr->blocks[i] = arr->blocks[i+1];
         }
 
-        arr.blocks[arr.size - 1] = NULL;
+        arr->blocks[arr->size - 1] = NULL;
     }
 
-    arr.size--;
+    arr->size--;
 
     return true;
 }
 
-bool delete_operation(struct Main_array array, int block_id, int operation_id){
-    if(block_id > array.size){
+bool delete_operation(struct Main_array* array, int block_id, int operation_id){
+    if(block_id > array->size){
         error("Invalid block id");
     }
 
-    struct Block* block = array.blocks[block_id];
+    struct Block* block = array->blocks[block_id];
 
     if(operation_id > block->size){
         fprintf(stderr, "invalid operation index");

@@ -99,7 +99,7 @@ int main(int argc, char** argv){
                 free(file2);
 
                 char* tmp_filename = compare_files(pair);
-                printf("Created block number %d", create_block(array, tmp_filename));
+                printf("Created block number %d", create_block(&array, tmp_filename));
             }
         }
         else if(strcpm(argv[i], "remove_block") == 0)
@@ -109,7 +109,7 @@ int main(int argc, char** argv){
             }
 
             printf("Proceeding to remove block no. %d", argv[i+1]);
-            delete_block(array, argv[i+1]);
+            delete_block(&array, argv[i+1]);
 
             i += 2;
         }
@@ -120,7 +120,7 @@ int main(int argc, char** argv){
             }
 
             printf("Proceeding to remove operation no. %d from block no. %d", argv[i+1], argv[i+2]);
-            delete_operation(array, argv[i+1], argv[i+2]);
+            delete_operation(&array, argv[i+1], argv[i+2]);
 
             i += 3;
         }
