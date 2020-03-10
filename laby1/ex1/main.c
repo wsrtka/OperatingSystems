@@ -30,13 +30,13 @@ double time_diff(clock_t time1, clock_t time2){
 }
 
 void write_result(clock_t start, clock_t end, struct tms* time_start, struct tms* time_end, FILE* result_file){
-    printf("\tREAL_TIME: %fl\n", timeDifference(start,end));
-    printf("\tUSER_TIME: %fl\n", timeDifference(time_start->tms_utime, time_end->tms_utime));
-    printf("\tSYSTEM_TIME: %fl\n", timeDifference(time_start->tms_stime, time_end->tms_stime));
+    printf("Real time: %fl\n", timeDifference(start,end));
+    printf("User time: %fl\n", timeDifference(time_start->tms_utime, time_end->tms_utime));
+    printf("System time: %fl\n", timeDifference(time_start->tms_stime, time_end->tms_stime));
 
-    fprintf(result_file, "\tREAL_TIME: %fl\n", timeDifference(start, end));
-    fprintf(result_file, "\tUSER_TIME: %fl\n", timeDifference(time_start->tms_utime, time_end->tms_utime));
-    fprintf(result_file, "\tSYSTEM_TIME: %fl\n", timeDifference(time_start->tms_stime, time_end->tms_stime));
+    fprintf(result_file, "Real time: %fl\n", timeDifference(start, end));
+    fprintf(result_file, "User time: %fl\n", timeDifference(time_start->tms_utime, time_end->tms_utime));
+    fprintf(result_file, "System time: %fl\n", timeDifference(time_start->tms_stime, time_end->tms_stime));
 }
 
 int main(int argc, char** argv){
@@ -44,6 +44,7 @@ int main(int argc, char** argv){
         error("Invalid number of arguments");
     }
 
+    
     struct Main_array array;
 
     for(int i = 1; i < argc; i++){
