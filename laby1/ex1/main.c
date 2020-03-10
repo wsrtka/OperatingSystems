@@ -3,6 +3,9 @@
 #include <string.h>
 #include <stdbool.h>
 #include <ctype.h>
+#include <time.h>
+#include <unistd.h>
+// #include <sys/times.h>
 #include <my_library.h>
 
 bool isNumber(char* var){
@@ -20,6 +23,20 @@ bool isCommand(char* str){
         || strcmp(str, "compare_pairs") == 0
         || strcmp(str, "remove_block") == 0
         || strcmp(str, "remove_operation") == 0;
+}
+
+double time_diff(clock_t time1, clock_t time2){
+    return (double)(time2 - time1) / sysconf(CLOCKS_PER_SEC);
+}
+
+void write_result(clock_t start, clock_t end, struct tms* time_start, struct tms* time_end, FILE* result_file){
+    printf("\tREAL_TIME: %fl\n", timeDifference(start,end));
+    printf("\tUSER_TIME: %fl\n", timeDifference(time_start->tms_utime, time_end->tms_utime));
+    printf("\tSYSTEM_TIME: %fl\n", timeDifference(time_start->tms_stime, time_end->tms_stime));
+
+    fprintf(result_file, "\tREAL_TIME: %fl\n", timeDifference(start, end));
+    fprintf(result_file, "\tUSER_TIME: %fl\n", timeDifference(time_start->tms_utime, time_end->tms_utime));
+    fprintf(result_file, "\tSYSTEM_TIME: %fl\n", timeDifference(time_start->tms_stime, time_end->tms_stime));
 }
 
 int main(int argc, char** argv){
@@ -42,7 +59,7 @@ int main(int argc, char** argv){
         }
         else if(strcpm(argv[i], "compare_pairs") == 0)
         {
-            while(!isCommand(argv[++i])){
+            while(!isCommand(argv[++i])){ //dopisać error handling na nieprawidłowe dane wejściowe
                 char* input = calloc(strlen(argv[i]), sizeof(char));
                 char* file1, file2;
                 int name_length = 0;
