@@ -44,10 +44,22 @@ int main(int argc, char** argv){
         error("Invalid number of arguments");
     }
 
-    
+    FILE* result_file = fopen("raport2.txt",'a');
+
+    struct tms* system_times[argc];
+    clock_t user_time[argc];
+    for(int i = 0; i < argc; i++){
+        system_times[i] = calloc(1, sizeof(struct tms*));
+        user_time[i] = 0;
+    }
+    int counter = 0;
+
     struct Main_array array;
 
     for(int i = 1; i < argc; i++){
+        user_time[counter] = times(system_times[counter]);
+        counter++;
+
         if(strcpm(argv[i], "create_table") == 0){
             if(!isNumber(argv[i+1])){
                 error("Invalid argument: should be of type int");
@@ -116,7 +128,11 @@ int main(int argc, char** argv){
         {
             error("Invalid argument");
         }
-        
-        return 0;
+        user_time[counter] = times(system_times[counter]);
+
+        write_result(user_time[counter - 1], user_time[counter], system_times[counter - 1], system_times[counter], result_file);
+        counter++;
     }
+
+    return 0;
 }
