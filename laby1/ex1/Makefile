@@ -11,6 +11,10 @@ shared:
 	make clean
 	gcc $(CFLAGS) -fPIC -c my_library.c
 	gcc -shared -o mylib.so my_library.o
-	gcc $(CFLAGS) -o main main.c 
+	gcc $(CFLAGS) -o main main.c -L. -lmy_library
 
 dynamic:
+	make clean
+	gcc $(CFLAGS) -fPIC -c my_library.c
+	gcc -shared -o mylib.so my_library.o
+	gcc $(CFLAGS) -o main_dynamic main_dynamic.c
