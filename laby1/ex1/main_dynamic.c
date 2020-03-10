@@ -44,7 +44,7 @@ void* get_function_pointer(void* lib, char* function_name){
     void* function_pointer = dlsym(lib, function_name);
 
     if(function_pointer == NULL){
-        error("Cannot fetch %s function", function_name);
+        error("Cannot fetch function");
     }
 
     return function_pointer;
@@ -56,9 +56,14 @@ int main(int argc, char** argv){
     }
 
     void* my_lib = dlopen("mylib.so", RTLD_LAZY);
-
+    if(my_lib == NULL){
+        error("Could not open library");
+    }
 
     FILE* result_file = fopen("raport2.txt",'a');
+    if(result_file == NULL){
+        error("Could not open result file");
+    }
 
     struct tms* system_times[argc];
     clock_t user_time[argc];
@@ -69,6 +74,14 @@ int main(int argc, char** argv){
     int counter = 0;
 
     struct Main_array array;
+    struct Main_array (*fptr_create_array)() = (struct Main_array (*)())get_function_pointer(my_lib, "create_array");
+    struct File_pair (*fptr_create_file_pair)() = (struct File_pair (*)())get_function_pointer(my_lib, "create_file_pair");
+    char (*fptr_compare_files)() = (char* (*)())get_function_pointer(my_lib, "compare_files");
+    int (*fptr_create_block)() = (int (*)())get_function_pointer(my_lib, "create_block");
+    int (*fptr_get_operations_amount)() = (int (*)())get_function_pointer(my_lib, "get_operations_amount");
+    bool (*fptr_delete_block) = (bool (*)())get_function_pointer(my_lib, "delete_block");
+    bool (*fptr_delete_operation) = (bool (*)())get_function_pointer(my_lib, "delete_operation");
+    void (*fptr_error) = (void (*)())get_function_pointer(my_lib, "error");
 
     for(int i = 1; i < argc; i++){
         user_time[counter] = times(system_times[counter]);
@@ -81,7 +94,7 @@ int main(int argc, char** argv){
 
             printf("Creating table of size %d\n", argv[i+1]);
 
-            array = create_array(argv[i+1]);
+            array = fptr_create_array(argv[i+1]);
             i += 2;
         }
         else if(strcpm(argv[i], "compare_pairs") == 0)
@@ -103,6 +116,10 @@ int main(int argc, char** argv){
                     else{
                         input[name_length++] = argv[j];
                     }
+                }
+
+                if(strcpm(file1, "") == 0 || strcpm(file2, "") == 0){
+                    error("Wrong file name");
                 }
 
                 strcpy(file2, input);
