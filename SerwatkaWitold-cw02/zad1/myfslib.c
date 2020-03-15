@@ -19,7 +19,19 @@ void write_result(struct tms* time_start, struct tms* time_end){
     // fprintf(result_file, "System time: %fl\n", timeDifference(time_start->tms_stime, time_end->tms_stime));
 }
 
-void generate_file(char* file_name, int count, int bytes);
+void generate_file(char* file_name, int count, int bytes){
+    char* command = calloc(size, sizeof(char));
+
+    strcpy(command, "head /dev/urandom | tr -dc A-Za-z0-9 | head -c ");
+    strcpy(command, bytes);
+    strcpy(command, " | fold -w ");
+    strcpy(command, count);
+    strcpy(command, " > ");
+    strcpy(command, file_name);
+
+    system(command);    
+}
+
 char* sys_get_block(int fd, int index, int length);
 void sys_write_block(int fd, char* block, int index, int length);
 void sys_sort(char* filename, int records, int length);
