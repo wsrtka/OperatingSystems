@@ -29,10 +29,25 @@ void generate_file(char* file_name, int count, int bytes){
     strcpy(command, " > ");
     strcpy(command, file_name);
 
-    system(command);    
+    system(command); 
+
+    free(command);   
 }
 
-char* sys_get_block(int fd, int index, int length);
+char* sys_get_block(int fd, int index, int length){
+    if(lseek(fd, index*length, SEEK_SET) == -1){
+        error("Could not get block in sys_get_block");
+    }
+
+   char* block = calloc(length, sizeof(char));
+
+   if(read(fd, block, length) == 0){
+       error("Could not read block in sys_get_block");
+   } 
+
+   return block;
+}
+
 void sys_write_block(int fd, char* block, int index, int length);
 void sys_sort(char* filename, int records, int length);
 void sys_copy(char* file1, char* file2, int records, int length);
