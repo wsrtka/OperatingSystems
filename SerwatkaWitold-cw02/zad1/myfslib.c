@@ -36,7 +36,7 @@ void generate_file(char* file_name, int count, int bytes){
 
 char* sys_get_block(int fd, int index, int length){
     if(lseek(fd, index*length, SEEK_SET) == -1){
-        error("Could not get block in sys_get_block");
+        error("Could not set position in sys_get_block");
     }
 
    char* block = calloc(length, sizeof(char));
@@ -48,7 +48,16 @@ char* sys_get_block(int fd, int index, int length){
    return block;
 }
 
-void sys_write_block(int fd, char* block, int index, int length);
+void sys_write_block(int fd, char* block, int index, int length){
+    if(lseek(fd, index*length, SEEK_SET) == -1){
+        error("Could not set position in sys_write_block");
+    }
+
+    if(write(fd, block, length) == 0){
+        error("Could not write to file in sys_write_block");
+    }
+}
+
 void sys_sort(char* filename, int records, int length);
 void sys_copy(char* file1, char* file2, int records, int length);
 char* lib_get_block(int fd, int index, int length);
