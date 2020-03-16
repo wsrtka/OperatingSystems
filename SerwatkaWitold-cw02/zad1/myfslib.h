@@ -18,7 +18,7 @@ void generate_file(char* file_name, int count, int bytes);
 char* sys_get_block(int fd, int index, int length);
 void sys_write_block(int fd, char* block, int index, int length);
 void sys_qsort(int fd, int from, int to, int length);
-void sys_copy(char* file1, char* file2, int records, int length);
+void sys_copy(int fd1, int fd2, int records, int length);
 char* lib_get_block(int fd, int index, int length);
 void lib_write_block(int fd, char* block, int index, int length);
 void lib_qsort(char* filename, int records, int length);

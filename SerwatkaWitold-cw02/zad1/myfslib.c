@@ -90,7 +90,19 @@ void sys_qsort(int fd, int from, int to, int length){
     sys_qsort(fd, q+1, to, length);
 }
 
-void sys_copy(char* file1, char* file2, int records, int length);
+void sys_copy(int fd1, int fd2, int records, int length){
+    char* buffor = calloc(length, sizeof(char));
+    lseek(fd2, 0, SEEK_END);
+
+    for(int i = 0; i < records; i++){
+        strcpy(buffor, sys_get_block(fd1, i, length));
+
+        if(write(fd2, buffor, length) < 1){
+            error("Unable to write to file in sys_copy");
+        }
+    }
+}
+
 char* lib_get_block(int fd, int index, int length);
 void lib_write_block(int fd, char* block, int index, int length);
 void lib_qsort(char* filename, int records, int length);
