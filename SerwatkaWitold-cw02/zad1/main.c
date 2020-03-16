@@ -84,7 +84,63 @@ int main(int argc, char** argv){
             i++;
         }
         else if(strcmp(argv[i++], "copy") == 0){
-            if(is_number())
+            if(is_number(argv[i]) != -1){
+                error("'copy' usage: copy <file1> <file2> <records> <bytes> <lib | sys>");
+            }
+            char* file1 = calloc(strlen(argv[i]), sizeof(char));
+            strcpy(file1, argv[i++]);
+
+            if(is_number(argv[i]) != -1){
+                error("'copy' usage: copy <file1> <file2> <records> <bytes> <lib | sys>");
+            }
+            char* file2 = calloc(strlen(argv[i]), sizeof(char));
+            strcpy(file2, argv[i++]);
+
+            if(is_number(argv[i]) == -1){
+                error("'copy' usage: copy <file1> <file2> <records> <bytes> <lib | sys>");
+            }
+            int records = is_number(argv[i++]);
+
+            if(is_number(argv[i]) == -1){
+                error("'copy' usage: copy <file1> <file2> <records> <bytes> <lib | sys>");
+            }
+            int bytes = is_number(argv[i++]);
+
+            if(is_number(argv[i]) != -1){
+                error("'copy' usage: copy <file1> <file2> <records> <bytes> <lib | sys>");
+            }
+
+            if(strcmp(argv[i], "sys") == 0){
+                int fd1 = open(file1, O_RDONLY);
+                int fd2 = open(file2, O_RDWR | O_APPEND);
+
+                if(fd1 == -1 || fd2 == -1){
+                    error("Could not open file");
+                }
+
+                sys_copy(fd1, fd2, records, bytes);
+
+                close(fd1);
+                close(fd2);
+            }
+            else if(strcmp(argv[i], "lib") == 0){
+                FILE* file1 = fopen(file1, "r");
+                FILE* file2 = fopen(file2, "a+");
+
+                if(file1 == NULL || file2 == NULL){
+                    error("Could not open file");
+                }
+
+                lib_copy(file1, file2, records, bytes);
+
+                fclose(file1);
+                fclose(file1);
+            }
+            else{
+                error("'copy' usage: copy <file1> <file2> <records> <bytes> <lib | sys>");
+            }
+
+            i++;
         }else{
             error("Could not understand argument");
         }
