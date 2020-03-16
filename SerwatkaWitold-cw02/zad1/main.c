@@ -14,7 +14,7 @@ int is_number(char* str){
     char* check = calloc(size, sizeof(char));
     long val;
 
-    val = strtol(str, check, 10);
+    val = strtol(str, &check, 10);
 
     if(check == str || *check != '\0'){
         return -1;

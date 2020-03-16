@@ -4,7 +4,7 @@
 
 int error(char* message){
     strcat(message, "\n");
-    fprintf(stderr, message);
+    fprintf(stderr, "%s", message);
     exit(1);
 }
 
@@ -13,21 +13,24 @@ double time_difference(clock_t time1, clock_t time2){
 }
 
 void write_result(FILE* file, struct tms* time_start, struct tms* time_end, char* comment){
-    printf("User time: %fl\n", timeDifference(time_start->tms_utime, time_end->tms_utime));
-    printf("System time: %fl\n", timeDifference(time_start->tms_stime, time_end->tms_stime));
+    printf("User time: %fl\n", time_difference(time_start->tms_utime, time_end->tms_utime));
+    printf("System time: %fl\n", time_difference(time_start->tms_stime, time_end->tms_stime));
 
-    fprintf(file, comment);
-    fprintf(file, "User time: %fl\n", timeDifference(time_start->tms_utime, time_end->tms_utime));
-    fprintf(file, "System time: %fl\n", timeDifference(time_start->tms_stime, time_end->tms_stime));
+    fprintf(file, "%s", comment);
+    fprintf(file, "User time: %fl\n", time_difference(time_start->tms_utime, time_end->tms_utime));
+    fprintf(file, "System time: %fl\n", time_difference(time_start->tms_stime, time_end->tms_stime));
 }
 
 void generate_file(char* file_name, int count, int bytes){
     char* command = calloc(size, sizeof(char));
+    char* numbers = calloc(12, sizeof(char));
 
     strcpy(command, "head /dev/urandom | tr -dc A-Za-z0-9 | head -c ");
-    strcpy(command, bytes);
+    sprintf(numbers, "%d", bytes);
+    strcpy(command, numbers);
     strcpy(command, " | fold -w ");
-    strcpy(command, count);
+    sprintf(numbers, "%d", count);
+    strcpy(command, numbers);
     strcpy(command, " > ");
     strcpy(command, file_name);
 
@@ -160,7 +163,7 @@ void lib_qsort(FILE* file, int from, int to, int length){
     int q = lib_partition(file, from, to, length);
 
     lib_qsort(file, from, q-1, length);
-    lib_sort(file, q+1, to, length);
+    lib_qsort(file, q+1, to, length);
 }
 
 void lib_copy(FILE* file1, FILE* file2, int records, int length){
