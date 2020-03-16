@@ -2,10 +2,10 @@
 
 #define size 128
 
-int error(char* message){
+void error(char* message){
     strcat(message, "\n");
-    fprintf(stderr, "%s", message);
-    exit(1);
+    printf("%s\n", message);
+    exit(0);
 }
 
 double time_difference(clock_t time1, clock_t time2){
@@ -25,18 +25,19 @@ void generate_file(char* file_name, int count, int bytes){
     char* command = calloc(size, sizeof(char));
     char* numbers = calloc(12, sizeof(char));
 
-    strcpy(command, "head /dev/urandom | tr -dc A-Za-z0-9 | head -c ");
+    strcpy(command, "head -c 1000000 /dev/urandom | tr -dc A-Za-z0-9 | fold -w ");
     sprintf(numbers, "%d", bytes);
-    strcpy(command, numbers);
-    strcpy(command, " | fold -w ");
+    strcat(command, numbers);
+    strcat(command, " | head -n ");
     sprintf(numbers, "%d", count);
-    strcpy(command, numbers);
-    strcpy(command, " > ");
-    strcpy(command, file_name);
+    strcat(command, numbers);
+    strcat(command, " > ");
+    strcat(command, file_name);
 
     system(command); 
 
-    free(command);   
+    free(command);
+    free(numbers);   
 }
 
 char* sys_get_block(int fd, int index, int length){

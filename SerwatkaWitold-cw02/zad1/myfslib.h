@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 #include <sys/times.h>
 
-int error(char* message);
+void error(char* message);
 double time_difference(clock_t time1, clock_t time2);
 void write_result(FILE* file, struct tms* time_start, struct tms* time_end, char* comment);
 void generate_file(char* file_name, int count, int bytes);
