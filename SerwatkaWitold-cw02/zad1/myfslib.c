@@ -3,6 +3,7 @@
 #define size 128
 
 int error(char* message){
+    strcat(message, "\n");
     fprintf(stderr, message);
     exit(1);
 }
