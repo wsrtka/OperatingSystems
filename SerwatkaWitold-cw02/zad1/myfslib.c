@@ -117,6 +117,15 @@ char* lib_get_block(FILE* file, int index, int length){
     return block;
 }
 
-void lib_write_block(int fd, char* block, int index, int length);
-void lib_qsort(char* filename, int records, int length);
-void lib_copy(char* file1, char* file2, int records, int length);
+void lib_write_block(FILE* file, char* block, int index, int length){
+    if(fseek(file, index*length, 0) != 0){
+        error("Could not set file position in lib_write_block");
+    }
+
+    if(fwrite(block, length, length, file) != length){
+        error("Could not write file in lib_write_block");
+    }
+}
+
+void lib_qsort(FILE* file, int records, int length);
+void lib_copy(FILE* file1, FILE* file2, int records, int length);
