@@ -58,9 +58,40 @@ void sys_write_block(int fd, char* block, int index, int length){
     }
 }
 
-void sys_sort(char* filename, int records, int length);
+int sys_partition(int fd, int from, int to, int length){
+    char* pivot = calloc(length, sizeof(char));
+    strcpy(pivot, sys_get_block(fd, to, length));
+
+    int i = from;
+
+    for(int j = from; j <= to; j++){
+        if(strcmp(sys_get_block(fd, j, length), pivot) < 0){
+            char* block = calloc(length, sizeof(char));
+            strcpy(block, sys_get_block(fd, j, length));
+
+            sys_write_block(fd, sys_get_block(fd, i, length), j, length);
+            sys_write_block(fd, block, i++, length);
+
+            free(block);
+        }
+    }
+
+    free(pivot);
+}
+
+void sys_qsort(int fd, int from, int to, int length){
+    if(from > to){
+        return;
+    }
+
+    int q = sys_partition(fd, from, to, length);
+
+    sys_qsort(fd, from, q-1, length);
+    sys_qsort(fd, q+1, to, length);
+}
+
 void sys_copy(char* file1, char* file2, int records, int length);
 char* lib_get_block(int fd, int index, int length);
 void lib_write_block(int fd, char* block, int index, int length);
-void lib_sort(char* filename, int records, int length);
+void lib_qsort(char* filename, int records, int length);
 void lib_copy(char* file1, char* file2, int records, int length);
