@@ -80,7 +80,7 @@ int sys_partition(int fd, int from, int to, int length){
 }
 
 void sys_qsort(int fd, int from, int to, int length){
-    if(from > to){
+    if(from >= to){
         return;
     }
 
@@ -127,5 +127,36 @@ void lib_write_block(FILE* file, char* block, int index, int length){
     }
 }
 
-void lib_qsort(FILE* file, int records, int length);
+int lib_partition(FILE* file, int from, int to, int length){
+    char* pivot = calloc(length, sizeof(char));
+    strcpy(pivot, lib_get_block(file, to, length));
+
+    int i = from;
+
+    for(int j = from; j <= to; j++){
+        if(strcmp(lib_get_block(file, j, length), pivot) < 0){
+            char* block = calloc(length, sizeof(char));
+            strcpy(block, lib_get_block(file, j, length));
+
+            lib_write_block(file, lib_get_block(file, i, length), j, length);
+            lib_write_block(file, block, i++, length);
+
+            free(block);
+        }
+    }
+
+    free(pivot);
+}
+
+void lib_qsort(FILE* file, int from, int to, int length){
+    if(from >= to){
+        return;
+    }
+
+    int q = lib_partition(file, from, to, length);
+
+    lib_qsort(file, from, q-1, length);
+    lib_sort(file, q+1, to, length);
+}
+
 void lib_copy(FILE* file1, FILE* file2, int records, int length);
