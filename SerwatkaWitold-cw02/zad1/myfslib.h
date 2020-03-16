@@ -21,7 +21,7 @@ void sys_qsort(int fd, int from, int to, int length);
 void sys_copy(int fd1, int fd2, int records, int length);
 char* lib_get_block(FILE* file, int index, int length);
 void lib_write_block(FILE* file, char* block, int index, int length);
-void lib_qsort(FILE* file, int records, int length);
+void lib_qsort(FILE* file, int from, int to, int length);
 void lib_copy(FILE* file1, FILE* file2, int records, int length);
 
 #endif

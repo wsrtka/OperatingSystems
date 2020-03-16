@@ -101,6 +101,8 @@ void sys_copy(int fd1, int fd2, int records, int length){
             error("Unable to write to file in sys_copy");
         }
     }
+
+    free(buffor);
 }
 
 char* lib_get_block(FILE* file, int index, int length){
@@ -159,4 +161,20 @@ void lib_qsort(FILE* file, int from, int to, int length){
     lib_sort(file, q+1, to, length);
 }
 
-void lib_copy(FILE* file1, FILE* file2, int records, int length);
+void lib_copy(FILE* file1, FILE* file2, int records, int length){
+    if(fseek(file2, 0, 2) != 0){
+        error("Could not set file position in lib_copy");
+    }
+
+    char* buffor = calloc(length, sizeof(char));
+
+    for(int i = 0; i < records; i++){
+        strcpy(buffor, lib_get_block(file1, i, length));
+
+        if(fwrite(buffor, length, length, file2) < length){
+            error("Could not write to file in lib_copy");
+        }
+    }
+
+    free(buffor);
+}
