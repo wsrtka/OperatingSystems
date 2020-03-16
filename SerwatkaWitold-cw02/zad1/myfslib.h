@@ -12,7 +12,7 @@
 
 int error(char* message);
 double time_difference(clock_t time1, clock_t time2);
-void write_result(struct tms* time_start, struct tms* time_end);
+void write_result(FILE* file, struct tms* time_start, struct tms* time_end, char* comment);
 void generate_file(char* file_name, int count, int bytes);
 char* sys_get_block(int fd, int index, int length);
 void sys_write_block(int fd, char* block, int index, int length);

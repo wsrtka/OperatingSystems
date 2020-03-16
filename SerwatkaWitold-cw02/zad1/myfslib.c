@@ -12,12 +12,13 @@ double time_difference(clock_t time1, clock_t time2){
     return (double)(time2 - time1) / sysconf(_SC_CLK_TCK);
 }
 
-void write_result(struct tms* time_start, struct tms* time_end){
+void write_result(FILE* file, struct tms* time_start, struct tms* time_end, char* comment){
     printf("User time: %fl\n", timeDifference(time_start->tms_utime, time_end->tms_utime));
     printf("System time: %fl\n", timeDifference(time_start->tms_stime, time_end->tms_stime));
 
-    // fprintf(result_file, "User time: %fl\n", timeDifference(time_start->tms_utime, time_end->tms_utime));
-    // fprintf(result_file, "System time: %fl\n", timeDifference(time_start->tms_stime, time_end->tms_stime));
+    fprintf(file, comment);
+    fprintf(file, "User time: %fl\n", timeDifference(time_start->tms_utime, time_end->tms_utime));
+    fprintf(file, "System time: %fl\n", timeDifference(time_start->tms_stime, time_end->tms_stime));
 }
 
 void generate_file(char* file_name, int count, int bytes){
