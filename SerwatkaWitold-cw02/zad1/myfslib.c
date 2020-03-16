@@ -103,7 +103,20 @@ void sys_copy(int fd1, int fd2, int records, int length){
     }
 }
 
-char* lib_get_block(int fd, int index, int length);
+char* lib_get_block(FILE* file, int index, int length){
+    if(fseek(file, index*length, 0) != 0){
+        error("Could not set file position in lib_get_block");
+    }
+
+    char* block = calloc(length, sizeof(char));
+
+    if(fread(block, length, length, file) == 0){
+        error("Could not read file in lib_get_block");
+    }
+
+    return block;
+}
+
 void lib_write_block(int fd, char* block, int index, int length);
 void lib_qsort(char* filename, int records, int length);
 void lib_copy(char* file1, char* file2, int records, int length);
