@@ -189,4 +189,6 @@ int main(int argc, char** argv){
 
     free(time_start);
     free(time_stop);
+
+    return 0;
 }
