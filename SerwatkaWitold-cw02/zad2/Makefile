@@ -11,7 +11,7 @@ nftw:
 	make clean
 	$(CC) find_nftw.c -o find
 
-test:
+tests:
 	make find
 	./find ./test -mtime 2 -atime 3
 	./find ./test -mtime 1 -atime 1 -maxdepth 1
