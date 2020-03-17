@@ -5,9 +5,10 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/time.h>
+#include <sys/times.h>
 #include <linux/limits.h>
 
 //TODO:
@@ -41,16 +42,11 @@ void print_abs_filepath(struct dirent* file, char* dir_name){
         error(EXIT_FAILURE);
     }
 
-    printf("File %s found. Data:\n Absolute path: %s\n", file->d_name, path);
+    printf("Directory contains file %s found. Data:\n Absolute path: %s\n", file->d_name, path);
 }
 
-void print_file_info(struct dirent* file, char* dir_name){
+void print_file_info(struct dirent* file, char* dir_name, struct stat file_stats){
     const char* file_path = get_filepath(file, dir_name);
-    struct stat file_stats;
-
-    if(stat(file_path, &file_stats) == -1){
-        error(EXIT_FAILURE);
-    }
 
     switch (file_stats.st_mode & __S_IFMT)
     {
@@ -68,8 +64,41 @@ void print_file_info(struct dirent* file, char* dir_name){
 
     printf("File size:                %lld bytes\n", (long long) file_stats.st_size);
 
-    printf("Last file access:         %s", ctime(&file_stats.st_atime));
-    printf("Last file modification:   %s", ctime(&file_stats.st_mtime));
+    printf("Last file access:         %s\n", ctime(&file_stats.st_atime));
+    printf("Last file modification:   %s\n\n", ctime(&file_stats.st_mtime));
+}
+
+void search_directory(DIR* dir, char* dir_name, int mtime, int atime, int depth){
+    rewinddir(dir);
+    struct dirent* current_file = calloc(1, sizeof(struct dirent)); //apparently tego nie trzeba (nawet nie wolno) free()? wg. linux.die.net
+    struct stat file_stats;
+
+    do{
+        //TODO: check atime, dtime, depth etc.
+        current_file = readdir(dir);
+
+        if(stat(get_filepath(current_file, dir_name), &file_stats) == -1){
+            error(EXIT_FAILURE);
+        }
+
+        if(difftime(file_stats.st_mtime, time(NULL))/86400 > mtime){ //bez mtime != -1 bo warunek na dodatniość powinien być zachowany
+            continue;
+        }
+
+        if(difftime(file_stats.st_atime, time(NULL))/86400 > atime){ //analogicznie jak wyżej
+            continue;
+        }
+        
+        print_abs_filepath(current_file, dir_name);
+        print_file_info(current_file, dir_name, file_stats);
+
+        if((file_stats.st_mode & __S_IFMT) == __S_IFDIR && depth > 0){
+            char* current_name = get_filepath(current_file, dir_name);
+            DIR* new_dir = opendir(current_name);
+
+            search_directory(new_dir, current_name, mtime, atime, depth-1);
+        }
+    }while(current_file != NULL);
 }
 
 int main(int argc, char** argv){
@@ -125,23 +154,7 @@ int main(int argc, char** argv){
         error(0);
     }
 
-    rewinddir(directory);
-    struct dirent* current_file = calloc(1, sizeof(struct dirent)); //apparently tego nie trzeba (nawet nie wolno) free()? wg. linux.die.net
-    current_file = readdir(directory);
-    struct stat* buffer;
-
-    while(current_file != NULL){
-        //TODO: check atime, dtime, depth etc.
-        
-        print_abs_filepath(current_file, dir_name);
-        print_links();
-        print_filetype();
-        print_filesize();
-        print_atime();
-        print_mtime();
-
-        current_file = readdir(directory);
-    }
+    search_directory(directory, dir_name, mtime, atime, depth);
 
     return 0;
 }
