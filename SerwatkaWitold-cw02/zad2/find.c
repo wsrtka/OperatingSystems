@@ -16,9 +16,9 @@ void error(int exit_code){
 }
 
 int main(int argc, char** argv){
-    int option;
+    int next_option;
 
-    const char* short_options = "mad";
+    const char* short_options = "m:a:d:";
 
     const struct option long_options[] = {
         { "mtime", 1, NULL, 'm' },
@@ -27,31 +27,41 @@ int main(int argc, char** argv){
         { NULL, 0, NULL, 0}
     };
 
-    do{
-        option = getopt_long(argc, argv, short_options, long_options, NULL);
+    char* search_dir = calloc(strlen(argv[1]), sizeof(char));
+    strcpy(search_dir, argv[1]);
 
-        switch (option)
+    int mtime, atime, depth;
+    int args_passed = 0;
+
+    optind = 2;
+
+    do{
+        next_option = getopt_long(argc, argv, short_options, long_options, NULL);
+
+        switch (next_option)
         {
         case 'm':
-            /* code */
+            mtime = atoi(optarg[args_passed]);
+            args_passed++;
             break;
 
         case 'a':
-            /* code */
+            atime = atoi(optarg[args_passed]);
+            args_passed++;
             break;
 
         case 'd':
-            /* code */
+            depth = atoi(optarg[args_passed]);
+            args_passed++;
             break;
 
         case -1:
-            /* code */
             break;
         
         default:
             abort();
         }
-    }while(option != -1);
+    }while(next_option != -1);
 
     return 0;
 }
