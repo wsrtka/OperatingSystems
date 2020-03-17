@@ -1,5 +1,5 @@
 clean:
-	rm -f *.o main *.a
+	rm -f *.o main *.a file1 file2 file3
 
 static:
 	make clean

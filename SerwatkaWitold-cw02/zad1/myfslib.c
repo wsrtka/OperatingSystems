@@ -5,7 +5,7 @@
 void error(char* message){
     strcat(message, "\n");
     printf("%s\n", message);
-    exit(0);
+    exit(EXIT_FAILURE);
 }
 
 double time_difference(clock_t time1, clock_t time2){
@@ -51,7 +51,7 @@ char* sys_get_block(int fd, int index, int length){
        error("Could not read block in sys_get_block");
    } 
 
-   return block;
+   return block;    //jak tutaj zwolnić pamięć?
 }
 
 void sys_write_block(int fd, char* block, int index, int length){
@@ -59,7 +59,7 @@ void sys_write_block(int fd, char* block, int index, int length){
         error("Could not set position in sys_write_block");
     }
 
-    if(write(fd, block, length) == 0){
+    if(write(fd, block, length) < length){
         error("Could not write to file in sys_write_block");
     }
 }
@@ -81,8 +81,12 @@ int sys_partition(int fd, int from, int to, int length){
             free(block);
         }
     }
+    sys_write_block(fd, sys_get_block(fd, i, length), to, length);
+    sys_write_block(fd, pivot, i, length);
 
     free(pivot);
+
+    return i;
 }
 
 void sys_qsort(int fd, int from, int to, int length){
@@ -103,7 +107,7 @@ void sys_copy(int fd1, int fd2, int records, int length){
     for(int i = 0; i < records; i++){
         strcpy(buffor, sys_get_block(fd1, i, length));
 
-        if(write(fd2, buffor, length) < 1){
+        if(write(fd2, buffor, length) < length){
             error("Unable to write to file in sys_copy");
         }
     }
@@ -118,7 +122,7 @@ char* lib_get_block(FILE* file, int index, int length){
 
     char* block = calloc(length, sizeof(char));
 
-    if(fread(block, length, length, file) == 0){
+    if(fread(block, length, length, file) < length){
         error("Could not read file in lib_get_block");
     }
 
@@ -130,7 +134,7 @@ void lib_write_block(FILE* file, char* block, int index, int length){
         error("Could not set file position in lib_write_block");
     }
 
-    if(fwrite(block, length, length, file) != length){
+    if(fwrite(block, length, length, file) < length){
         error("Could not write file in lib_write_block");
     }
 }
@@ -152,8 +156,12 @@ int lib_partition(FILE* file, int from, int to, int length){
             free(block);
         }
     }
+    lib_write_block(file, lib_get_block(file, i, length), to, length);
+    lib_write_block(file, pivot, i, length);
 
     free(pivot);
+
+    return i;
 }
 
 void lib_qsort(FILE* file, int from, int to, int length){
