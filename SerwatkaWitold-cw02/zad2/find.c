@@ -11,10 +11,6 @@
 #include <sys/times.h>
 #include <linux/limits.h>
 
-//TODO:
-//set EXIT_FAILURE and EXIT_SUCCESS in error() calls
-//remove all callocs where there should be none
-
 void error(int exit_code){
     printf("Usage: find <directory> <options>\n");
     printf("-mtime      Find file modified at least n+1 days ago.\n-atime      Find file accessed at least n+1 days ago.\n-maxdepth   Descend at most n levels below the starting-points.\n");
@@ -74,7 +70,6 @@ void search_directory(DIR* dir, char* dir_name, int mtime, int atime, int depth)
     struct stat file_stats;
 
     do{
-        //TODO: check atime, dtime, depth etc.
         current_file = readdir(dir);
 
         if(stat(get_filepath(current_file, dir_name), &file_stats) == -1){

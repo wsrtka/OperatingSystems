@@ -13,10 +13,6 @@
 #include <sys/times.h>
 #include <linux/limits.h>
 
-//TODO:
-//set EXIT_FAILURE and EXIT_SUCCESS in error() calls
-//remove all callocs where there should be none
-
 int depth = -1;
 
 void error(int exit_code){
