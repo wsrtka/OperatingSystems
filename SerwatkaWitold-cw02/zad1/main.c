@@ -33,15 +33,10 @@ int main(int argc, char** argv){
 
     FILE* result_file = fopen("wyniki.txt", "a+");
 
-    printf("Opened result file");
-
     for(int i = 1; i < argc; i++){
         times(time_start);
-        printf("Entered for loop");
 
         if(strcmp(argv[i++], "generate") == 0){
-            printf("Entered generate");
-
             if(is_number(argv[i]) != -1){
                 error("'generate' usage: generate <file name> <records> <bytes>");
             }
@@ -62,10 +57,10 @@ int main(int argc, char** argv){
 
             times(time_stop);
             write_result(result_file, time_start, time_stop, "Time measurement for generate function:");
+
+            free(filename);
         }
         else if(strcmp(argv[i++], "sort") == 0){
-            printf("Entered sort");
-
             if(is_number(argv[i]) != -1){
                 error("'sort' usage: sort <file name> <records> <bytes> <lib | sys>");
             }
@@ -87,11 +82,7 @@ int main(int argc, char** argv){
             }
             
             if(strcmp(argv[i], "sys") == 0){
-                printf("Entered sys sort");
-
                 int fd = open(filename, O_RDWR);
-
-                printf("Opened sort file");
 
                 sys_qsort(fd, 0, records, bytes);
 
@@ -99,7 +90,6 @@ int main(int argc, char** argv){
                 write_result(result_file, time_start, time_stop, "Time measurement for sys quicksort:");
 
                 close(fd);
-                printf("closed sort file");
             }
             else if(strcmp(argv[i], "lib") == 0){
                 FILE* file = fopen(filename, "a+");
@@ -112,7 +102,6 @@ int main(int argc, char** argv){
                 fclose(file);
             }
             else{
-                printf("Error");
                 error("'sort' usage: sort <file name> <records> <bytes> <lib | sys>");
             }
 
@@ -180,6 +169,8 @@ int main(int argc, char** argv){
             else{
                 error("'copy' usage: copy <file1> <file2> <records> <bytes> <lib | sys>");
             }
+            free(file1);
+            free(file2);
 
             i++;
         }else{
