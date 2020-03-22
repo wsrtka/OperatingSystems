@@ -98,8 +98,9 @@ struct matrix read_matrix(char* file_name){
 //===============MATRIX MULTIPLICATION================//
 
 void save_result_common(struct matrix matrix, char* filename, int block_size, int block_number){
-    FILE* file = fopen("result.txt", "r+"); //thread safe
-    if(file == NULL){
+    FILE* file = fopen("result.txt", "r"); //thread safe
+    FILE* tmp = fopen("new_result.txt", "w");
+    if(file == NULL || tmp == NULL){
         exit(EXIT_FAILURE);
     }
 
@@ -114,6 +115,22 @@ void save_result_common(struct matrix matrix, char* filename, int block_size, in
         }
     }
     while(c != '\n');
+
+    rewind(file);
+    int curr_pos = 0;
+    int i = 0;
+
+    do{
+        if(curr_pos >= block_number * block_size && curr_pos < block_size * (1 + block_number && curr_width >= (block_number + 1) * block_size)){
+            if(fwrite(&matrix.values[i], sizeof(int), 1, tmp) == 0){
+                error(EXIT_FAILURE);
+            }
+        }
+        c = (char)getc(file);
+    }
+    while(c != NULL);
+
+    //zmien nazwe i usun file
 
     fclose(file);
 }
