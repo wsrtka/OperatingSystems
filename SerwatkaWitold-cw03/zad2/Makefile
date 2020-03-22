@@ -6,3 +6,8 @@ compile:
 
 test:
 	./macierz source.txt 1 2 separate
+
+all:
+	make clean
+	make compile
+	make test

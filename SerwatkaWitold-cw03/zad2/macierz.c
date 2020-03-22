@@ -5,6 +5,8 @@
 #include <string.h>
 #include <ctype.h>
 
+#define MAX_SIZE 1024
+
 struct matrix_dim{
     int width;
     int height;
@@ -31,12 +33,14 @@ int is_number(char* str){
     return 1;
 }
 
+//==================READING MATRIXES================//
+
 struct matrix_dim get_matrix_size(FILE* file){
     int width = 0, height = 0;
     char c;
     do{
         c = (char)fgetc(file);
-        if(c == ',' && height == 0){
+        if(c == ';' && height == 0){
             if(width == 0){
                 width++;
             }
@@ -69,9 +73,25 @@ struct matrix read_matrix(char* file_name){
     result.dim = dim;
     result.values = calloc(result.dim.width * result.dim.height, sizeof(short));
 
-    fclose(file);
+    char* num;
+    char* buffer;
+    size_t len = 0;
+    ssize_t read;
+    int counter = 0;
+    rewind(file);
 
-    printf("%d\n%d\n", result.dim.height, result.dim.width);
+    while(read = getline(&buffer, &len, file) != -1){
+        num = strtok(buffer, ";");
+        do{
+            result.values[counter++] = atoi(num);
+            num = strtok(NULL, ";");
+        }
+        while(num != NULL);
+    }
+
+    free(buffer);
+
+    fclose(file);
 
     return result;
 }
@@ -95,13 +115,15 @@ int main(int argc, char** argv){
         error(EXIT_FAILURE);
     }
 
-    char A_matrix_file_name[1024], B_matrix_file_name[1024], C_matrix_file_name[1024];
+    char A_matrix_file_name[MAX_SIZE], B_matrix_file_name[MAX_SIZE], C_matrix_file_name[MAX_SIZE];
 
     rewind(source_file);
     fscanf(source_file, "%s %s %s", A_matrix_file_name, B_matrix_file_name, C_matrix_file_name);
     fclose(source_file);
 
     struct matrix A_matrix = read_matrix(A_matrix_file_name);
+    struct matrix B_matrix = read_matrix(B_matrix_file_name);
+    // struct matrix C_matrix = read_matrix(C_matrix_file_name);
 
     return EXIT_SUCCESS;
 }
