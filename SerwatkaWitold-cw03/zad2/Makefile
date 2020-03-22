@@ -2,7 +2,7 @@ clean:
 	rm macierz
 
 compile:
-	gcc -Wall macierz.c macierz
+	gcc -Wall macierz.c -o macierz
 
 test:
-	./macierz source.txt 1 2
+	./macierz source.txt 1 2 separate
