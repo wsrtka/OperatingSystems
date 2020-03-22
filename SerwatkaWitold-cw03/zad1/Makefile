@@ -1,10 +1,9 @@
 CC = gcc -Wall
 
 clean:
-	rm find find_nftw
+	rm main
 
 main:
-	make clean
 	$(CC) main.c -o main
 
 tests:
