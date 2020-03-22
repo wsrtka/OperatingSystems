@@ -13,7 +13,7 @@ struct matrix_dim{
 };
 
 struct matrix{
-    short* values;
+    int* values;
     struct matrix_dim dim;
 };
 
@@ -71,16 +71,15 @@ struct matrix read_matrix(char* file_name){
     struct matrix result;
 
     result.dim = dim;
-    result.values = calloc(result.dim.width * result.dim.height, sizeof(short));
+    result.values = calloc(result.dim.width * result.dim.height, sizeof(int));
 
     char* num;
     char* buffer;
     size_t len = 0;
-    ssize_t read;
     int counter = 0;
     rewind(file);
 
-    while(read = getline(&buffer, &len, file) != -1){
+    while(getline(&buffer, &len, file) != -1){
         num = strtok(buffer, ";");
         do{
             result.values[counter++] = atoi(num);
@@ -94,6 +93,74 @@ struct matrix read_matrix(char* file_name){
     fclose(file);
 
     return result;
+}
+
+//===============MATRIX MULTIPLICATION================//
+
+void save_result_common(struct matrix matrix, char* filename, int block_size, int block_number){
+    FILE* file = fopen("result.txt", "r+"); //thread safe
+    if(file == NULL){
+        exit(EXIT_FAILURE);
+    }
+
+    char c;
+    int curr_width = 0;
+    rewind(file);
+
+    do{
+        c = (char)getc(file);
+        if(c == ';'){
+            curr_width++;
+        }
+    }
+    while(c != '\n');
+
+    fclose(file);
+}
+
+void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, int processes_number, int max_time, int common_flag){
+    int counter = 0;
+    pid_t child_pid[processes_number];
+    int block_size = matrix2.dim.width/processes_number;
+
+    // FILE* file = fopen("result.txt", "r+");
+
+    while(counter < processes_number){
+        pid_t pid = fork();
+
+        if(pid < 0){
+            error(EXIT_FAILURE);
+        }
+        else if(pid != 0){
+            child_pid[counter++] = pid;
+        }
+        else{
+            int m_counter = 0;
+
+            struct matrix result;
+            result.dim.width = block_size;
+            result.dim.height = matrix1.dim.height;
+            result.values = calloc(result.dim.width * result.dim.height, sizeof(int));
+            
+            for(int i = counter * block_size; i < (counter + 1) * block_size; i++){
+                for(int j = 0; j < matrix1.dim.width; j++){
+                    for(int k = 0; k < matrix1.dim.width; k++){
+                        result.values[result.dim.width * j + i - counter * block_size] += matrix1.values[matrix1.dim.width * j + k] * matrix2.values[matrix2.dim.width * k + i];
+                        m_counter++;
+                    }
+                }
+            }
+
+            if(common_flag == 0){
+                //zapis common
+            }
+            else{
+                //zapis separate
+            }
+
+            exit(m_counter);
+        }
+    }
 }
 
 //========================MAIN=======================//
@@ -123,7 +190,9 @@ int main(int argc, char** argv){
 
     struct matrix A_matrix = read_matrix(A_matrix_file_name);
     struct matrix B_matrix = read_matrix(B_matrix_file_name);
-    // struct matrix C_matrix = read_matrix(C_matrix_file_name);
+    struct matrix C_matrix;
+
+    multiply_matrixes(A_matrix, B_matrix, child_processes, max_time, common_flag);
 
     return EXIT_SUCCESS;
 }
