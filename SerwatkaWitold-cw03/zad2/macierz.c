@@ -32,14 +32,20 @@ int is_number(char* str){
 }
 
 struct matrix_dim get_matrix_size(FILE* file){
-    int width = 0, height = 1;
+    int width = 0, height = 0;
     char c;
     do{
         c = (char)fgetc(file);
-        if(c == ',' && height == 1){
+        if(c == ',' && height == 0){
+            if(width == 0){
+                width++;
+            }
             width++;
         }
         if(c == '\n'){
+            if(height == 0){
+                height++;
+            }
             height++;
         }
     }while(c != EOF);
@@ -89,7 +95,7 @@ int main(int argc, char** argv){
         error(EXIT_FAILURE);
     }
 
-    char* A_matrix_file_name[1024], B_matrix_file_name[1024], C_matrix_file_name[1024];
+    char A_matrix_file_name[1024], B_matrix_file_name[1024], C_matrix_file_name[1024];
 
     rewind(source_file);
     fscanf(source_file, "%s %s %s", A_matrix_file_name, B_matrix_file_name, C_matrix_file_name);
