@@ -14,3 +14,9 @@ all:
 	make clean
 	make compile
 	make test
+
+gen:
+	gcc -Wall helper.c -o helper
+
+test:
+	./helper 1 2 5
