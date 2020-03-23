@@ -33,6 +33,16 @@ int is_number(char* str){
     return 1;
 }
 
+struct matrix merge_matrixes(struct matrix dest, struct matrix src, int from, int to){
+    for(int i = 0; i < dest.dim.height * dest.dim.width; i++){
+        if((i + 1) % dest.dim.width >= from && (i + 1) % dest.dim.width < to){
+            dest.values[i] = src.values[i];
+        }
+    }
+
+    return dest;
+}
+
 //==================READING MATRIXES================//
 
 struct matrix_dim get_matrix_size(FILE* file){
@@ -140,48 +150,15 @@ void save_result_common(struct matrix matrix, char* file_name, int block_size, i
     while(c != '\n');
 
     rewind(file);
-    int curr_pos = 0;
-    int i = 0;
-
-    // do{
-    //     if(curr_pos >= block_number * block_size 
-    //     && curr_pos < block_size * (1 + block_number) 
-    //     && curr_width >= (block_number + 1) * block_size){
-    //         if(fwrite(&matrix.values[i++], sizeof(int), 1, tmp) == 0){
-    //             error(EXIT_FAILURE);
-    //         }
-    //     }
 
     //Step 1: read current results
     struct matrix curr_results = read_matrix(file_name);
 
     //Step 2: merge matrixes
+    curr_results = merge_matrixes(curr_results, matrix, block_number * block_size, (block_number + 1) * block_size);
+
     //Step 3: write new results
 
-    //     c = (char)getc(file);
-
-    //     if(c == ';'){
-    //         curr_pos++;
-    //     }
-
-    //     if(c == '\n' && curr_pos < block_number * block_size){
-    //         fseek(file, -1, SEEK_CUR);
-
-    //         for(int j = 0; j < (block_size * block_number) - curr_pos; j++){
-    //             fwrite(";", sizeof(char), 1, tmp);
-    //         }
-
-    //         for(int j = 0; j < block_size * (block_number + 1); j++){
-    //             fwrite(&matrix.values[i++], sizeof(int), 1, tmp);
-    //             fwrite(";", sizeof(char), 1, tmp);
-    //         }
-
-    //         curr_pos = 0;
-    //     }
-    // }
-    // while(c != NULL);
-
-    //zmien nazwe i usun file
 
     fclose(file);
 }
@@ -258,7 +235,11 @@ int main(int argc, char** argv){
 
     struct matrix A_matrix = read_matrix(A_matrix_file_name);
     struct matrix B_matrix = read_matrix(B_matrix_file_name);
-    struct matrix C_matrix;
+    struct matrix C_matrix = merge_matrixes(A_matrix, B_matrix, 1, 2);
+
+    for(int i = 0; i < 4; i++){
+        printf("%d\n", C_matrix.values[i]);
+    }
 
     multiply_matrixes(A_matrix, B_matrix, child_processes, max_time, common_flag);
 
