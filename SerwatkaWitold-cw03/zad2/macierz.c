@@ -110,6 +110,7 @@ struct matrix read_matrix(char* file_name){
 void create_results_file(char* file_name, int matrix_width, int matrix_heigh){
     FILE* result_file = fopen(file_name, "w");
     if(result_file == NULL){
+         printf("elo");
         error(EXIT_FAILURE);
     }
 
@@ -118,7 +119,7 @@ void create_results_file(char* file_name, int matrix_width, int matrix_heigh){
 
     for(int i = 0; i < matrix_heigh * matrix_width; i++){
         fwrite(safe_val, sizeof(char), 1, result_file);
-        if((i + 1) % matrix_width == 0){
+        if((i + 1) % matrix_width == 0 && i + 1 != matrix_heigh * matrix_width){
             fwrite("\n", sizeof(char), 1, result_file);
         }
         else{
@@ -149,6 +150,8 @@ int write_matrix(char* file_name, struct matrix src){
         }
     }
 
+    fclose(result_file);
+
     return 0;
 }
 
@@ -175,13 +178,12 @@ void save_result_separate(struct matrix matrix, char* file_name, int block_size,
     result.values = calloc(result.dim.width * result.dim.height, sizeof(int));
 
     for(int i = 0; i < result.dim.width * result.dim.height; i++){
-        result.values[i] = matrix.values[(block_size * block_number) + i + matrix.dim.width * (i / block_size)];
+        result.values[i] = matrix.values[(block_size * block_number) + (i % matrix.dim.width) + matrix.dim.width * (i / block_size)];
     }
 
-    char num[10];
+    char num[MAX_SIZE/4];
     sprintf(num, "%d", block_number);
     strcat(num, file_name);
-
     write_matrix(num, result);
 }
 
@@ -189,6 +191,10 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, int process
     int counter = 0;
     pid_t child_pid[processes_number];
     int block_size = matrix2.dim.width/processes_number;
+
+    if(common_flag == 1){
+        create_results_file("results.txt", matrix2.dim.width, matrix1.dim.height);
+    }
 
     while(counter < processes_number){
         pid_t pid = fork();
@@ -216,20 +222,47 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, int process
                 }
             }
 
-            if(common_flag == 0){
-                create_results_file("results.txt", matrix2.dim.width, matrix1.dim.height);
+            if(common_flag == 1){
                 save_result_common(result, "results.txt", block_size, counter);
             }
             else{
-                save_result_common(result, "result.txt", block_size, counter);
+                printf("elo\n");
+                save_result_separate(result, "result.txt", block_size, counter);
             }
 
             exit(m_counter);
         }
     }
 
-    if(common_flag == 1){
+    if(common_flag == 0){
         //złącz pliki poleceniem "paste"
+        pid_t pasting = fork();
+
+        if(pasting < 0){
+            error(EXIT_FAILURE);
+        }
+        else if(pasting == 0){
+            const char* argv[3 + processes_number];
+
+            argv[0] = "paste";
+            argv[1] = "-d=;";
+
+            char num[MAX_SIZE/4];
+            for(int i = 0; i < processes_number; i++){
+                sprintf(num, "%d", i);
+                strcat(num, "result.txt");
+                argv[i + 2] = num;
+            }
+
+            // argv[processes_number + 2] = "&>";
+            // argv[processes_number + 3] = "results.txt";
+            argv[processes_number + 2] = NULL;
+
+            execvp("paste", argv);
+
+
+            //exit xd
+        }
     }
 }
 
@@ -260,7 +293,6 @@ int main(int argc, char** argv){
 
     struct matrix A_matrix = read_matrix(A_matrix_file_name);
     struct matrix B_matrix = read_matrix(B_matrix_file_name);
-    struct matrix C_matrix;
 
     multiply_matrixes(A_matrix, B_matrix, child_processes, max_time, common_flag);
 

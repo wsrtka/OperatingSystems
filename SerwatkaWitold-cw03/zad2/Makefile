@@ -1,11 +1,14 @@
 clean:
-	rm macierz
+	rm macierz results.txt
 
 compile:
 	gcc -Wall macierz.c -o macierz
 
-test:
+separate:
 	./macierz source.txt 1 2 separate
+
+common:
+	./macierz source.txt 1 2 common
 
 all:
 	make clean
