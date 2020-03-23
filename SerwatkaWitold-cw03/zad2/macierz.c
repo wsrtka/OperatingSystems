@@ -132,7 +132,7 @@ void create_results_file(char* file_name, int matrix_width, int matrix_heigh){
 int write_matrix(char* file_name, struct matrix src){
     FILE* result_file = fopen(file_name, "w");
     if(result_file == NULL){
-        error(EXIT_FAILURE);
+        return -1;
     }
 
     rewind(result_file);
@@ -148,31 +148,13 @@ int write_matrix(char* file_name, struct matrix src){
             fwrite(";", sizeof(char), 1, result_file);
         }
     }
+
+    return 0;
 }
 
 //===============MATRIX MULTIPLICATION================//
 
 void save_result_common(struct matrix matrix, char* file_name, int block_size, int block_number){
-    FILE* file = fopen("result.txt", "r"); //thread safe
-    FILE* tmp = fopen("new_result.txt", "w");
-    if(file == NULL || tmp == NULL){
-        exit(EXIT_FAILURE);
-    }
-
-    char c;
-    int curr_width = 0;
-    rewind(file);
-
-    do{
-        c = (char)getc(file);
-        if(c == ';'){
-            curr_width++;
-        }
-    }
-    while(c != '\n');
-
-    rewind(file);
-
     //Step 1: read current results
     struct matrix results = read_matrix(file_name);
 
@@ -180,18 +162,33 @@ void save_result_common(struct matrix matrix, char* file_name, int block_size, i
     results = merge_matrixes(results, matrix, block_number * block_size, (block_number + 1) * block_size);
 
     //Step 3: write new results
-    
+    if(write_matrix(file_name, results) == -1){
+        error(EXIT_FAILURE);
+    }
+}
 
+void save_result_separate(struct matrix matrix, char* file_name, int block_size, int block_number){
+    struct matrix result;
 
-    fclose(file);
+    result.dim.width = block_size;
+    result.dim.height = matrix.dim.height;
+    result.values = calloc(result.dim.width * result.dim.height, sizeof(int));
+
+    for(int i = 0; i < result.dim.width * result.dim.height; i++){
+        result.values[i] = matrix.values[(block_size * block_number) + i + matrix.dim.width * (i / block_size)];
+    }
+
+    char num[10];
+    sprintf(num, "%d", block_number);
+    strcat(num, file_name);
+
+    write_matrix(num, result);
 }
 
 void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, int processes_number, int max_time, int common_flag){
     int counter = 0;
     pid_t child_pid[processes_number];
     int block_size = matrix2.dim.width/processes_number;
-
-    create_results_file("results.txt", matrix2.dim.width, matrix1.dim.height);
 
     while(counter < processes_number){
         pid_t pid = fork();
@@ -220,14 +217,19 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, int process
             }
 
             if(common_flag == 0){
-                //zapis common
+                create_results_file("results.txt", matrix2.dim.width, matrix1.dim.height);
+                save_result_common(result, "results.txt", block_size, counter);
             }
             else{
-                //zapis separate
+                save_result_common(result, "result.txt", block_size, counter);
             }
 
             exit(m_counter);
         }
+    }
+
+    if(common_flag == 1){
+        //złącz pliki poleceniem "paste"
     }
 }
 
