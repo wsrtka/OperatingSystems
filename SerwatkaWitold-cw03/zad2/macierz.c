@@ -95,9 +95,32 @@ struct matrix read_matrix(char* file_name){
     return result;
 }
 
+//==================WRITING MATRIXES================//
+
+void create_results_file(char* file_name, int matrix_width, int matrix_heigh){
+    FILE* result_file = fopen(file_name, "w");
+    if(result_file == NULL){
+        error(EXIT_FAILURE);
+    }
+
+    char* safe_val = "0";
+
+    for(int i = 0; i < matrix_heigh * matrix_width; i++){
+        fwrite(safe_val, sizeof(char), 1, result_file);
+        if((i + 1) % matrix_width == 0){
+            fwrite("\n", sizeof(char), 1, result_file);
+        }
+        else{
+            fwrite(";", sizeof(char), 1, result_file);
+        }
+    }
+
+    fclose(result_file);
+}
+
 //===============MATRIX MULTIPLICATION================//
 
-void save_result_common(struct matrix matrix, char* filename, int block_size, int block_number){
+void save_result_common(struct matrix matrix, char* file_name, int block_size, int block_number){
     FILE* file = fopen("result.txt", "r"); //thread safe
     FILE* tmp = fopen("new_result.txt", "w");
     if(file == NULL || tmp == NULL){
@@ -120,15 +143,43 @@ void save_result_common(struct matrix matrix, char* filename, int block_size, in
     int curr_pos = 0;
     int i = 0;
 
-    do{
-        if(curr_pos >= block_number * block_size && curr_pos < block_size * (1 + block_number && curr_width >= (block_number + 1) * block_size)){
-            if(fwrite(&matrix.values[i], sizeof(int), 1, tmp) == 0){
-                error(EXIT_FAILURE);
-            }
-        }
-        c = (char)getc(file);
-    }
-    while(c != NULL);
+    // do{
+    //     if(curr_pos >= block_number * block_size 
+    //     && curr_pos < block_size * (1 + block_number) 
+    //     && curr_width >= (block_number + 1) * block_size){
+    //         if(fwrite(&matrix.values[i++], sizeof(int), 1, tmp) == 0){
+    //             error(EXIT_FAILURE);
+    //         }
+    //     }
+
+    //Step 1: read current results
+    struct matrix curr_results = read_matrix(file_name);
+
+    //Step 2: merge matrixes
+    //Step 3: write new results
+
+    //     c = (char)getc(file);
+
+    //     if(c == ';'){
+    //         curr_pos++;
+    //     }
+
+    //     if(c == '\n' && curr_pos < block_number * block_size){
+    //         fseek(file, -1, SEEK_CUR);
+
+    //         for(int j = 0; j < (block_size * block_number) - curr_pos; j++){
+    //             fwrite(";", sizeof(char), 1, tmp);
+    //         }
+
+    //         for(int j = 0; j < block_size * (block_number + 1); j++){
+    //             fwrite(&matrix.values[i++], sizeof(int), 1, tmp);
+    //             fwrite(";", sizeof(char), 1, tmp);
+    //         }
+
+    //         curr_pos = 0;
+    //     }
+    // }
+    // while(c != NULL);
 
     //zmien nazwe i usun file
 
@@ -140,7 +191,7 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, int process
     pid_t child_pid[processes_number];
     int block_size = matrix2.dim.width/processes_number;
 
-    // FILE* file = fopen("result.txt", "r+");
+    create_results_file("results.txt", matrix2.dim.width, matrix1.dim.height);
 
     while(counter < processes_number){
         pid_t pid = fork();
@@ -155,14 +206,14 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, int process
             int m_counter = 0;
 
             struct matrix result;
-            result.dim.width = block_size;
+            result.dim.width = matrix2.dim.width;
             result.dim.height = matrix1.dim.height;
             result.values = calloc(result.dim.width * result.dim.height, sizeof(int));
             
-            for(int i = counter * block_size; i < (counter + 1) * block_size; i++){
-                for(int j = 0; j < matrix1.dim.width; j++){
+            for(int i = counter * block_size; i < (counter + 1) * block_size; i++){ //kolumna macierzy b
+                for(int j = 0; j < matrix1.dim.width; j++){                         //rząd macierzy a
                     for(int k = 0; k < matrix1.dim.width; k++){
-                        result.values[result.dim.width * j + i - counter * block_size] += matrix1.values[matrix1.dim.width * j + k] * matrix2.values[matrix2.dim.width * k + i];
+                        result.values[result.dim.width * j + i] += matrix1.values[matrix1.dim.width * j + k] * matrix2.values[matrix2.dim.width * k + i];
                         m_counter++;
                     }
                 }
