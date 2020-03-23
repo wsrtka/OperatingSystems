@@ -1,9 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
+#include <time.h>
 
 #define MAX_SIZE 1024
 
@@ -206,6 +208,8 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, int process
             child_pid[counter++] = pid;
         }
         else{
+            clock_t start = clock();
+
             int m_counter = 0;
 
             struct matrix result;
@@ -218,6 +222,9 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, int process
                     for(int k = 0; k < matrix1.dim.width; k++){
                         result.values[result.dim.width * j + i] += matrix1.values[matrix1.dim.width * j + k] * matrix2.values[matrix2.dim.width * k + i];
                         m_counter++;
+                        if(((double)(clock() - start) / CLOCKS_PER_SEC) >= (double)max_time){
+                            exit(m_counter);
+                        }
                     }
                 }
             }
@@ -232,6 +239,12 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, int process
 
             exit(m_counter);
         }
+    }
+
+    for(int i = 0; i < processes_number; i++){
+        int m_status;
+        waitpid(child_pid[i], &m_status, 0);
+        printf("Proces %d wykonał %d mnożeń macierzy.\n", child_pid[i], WEXITSTATUS(m_status));
     }
 
     if(common_flag == 0){
@@ -254,7 +267,7 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, int process
                 argv[i + 2] = num;
             }
 
-            // argv[processes_number + 2] = "&>";
+            // argv[processes_number + 2] = ">";
             // argv[processes_number + 3] = "results.txt";
             argv[processes_number + 2] = NULL;
 
@@ -262,6 +275,7 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, int process
 
 
             //exit xd
+            exit(0);
         }
     }
 }
