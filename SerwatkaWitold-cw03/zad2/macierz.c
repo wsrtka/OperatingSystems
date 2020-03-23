@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <string.h>
@@ -266,13 +268,13 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, int process
                 strcat(num, "result.txt");
                 argv[i + 2] = num;
             }
-
-            // argv[processes_number + 2] = ">";
-            // argv[processes_number + 3] = "results.txt";
             argv[processes_number + 2] = NULL;
 
-            execvp("paste", argv);
+            int fd = open("results.txt", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+            dup2(fd, 1);
+            close(fd);
 
+            execvp("paste", argv);
 
             //exit xd
             exit(0);
