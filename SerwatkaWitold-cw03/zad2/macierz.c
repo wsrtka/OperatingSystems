@@ -113,6 +113,7 @@ void create_results_file(char* file_name, int matrix_width, int matrix_heigh){
         error(EXIT_FAILURE);
     }
 
+    rewind(result_file);
     char* safe_val = "0";
 
     for(int i = 0; i < matrix_heigh * matrix_width; i++){
@@ -126,6 +127,27 @@ void create_results_file(char* file_name, int matrix_width, int matrix_heigh){
     }
 
     fclose(result_file);
+}
+
+int write_matrix(char* file_name, struct matrix src){
+    FILE* result_file = fopen(file_name, "w");
+    if(result_file == NULL){
+        error(EXIT_FAILURE);
+    }
+
+    rewind(result_file);
+    char num[MAX_SIZE/4];
+
+    for(int i = 0; i < src.dim.width * src.dim.height; i++){
+        sprintf(num, "%d", src.values[i]);
+        fwrite(num, sizeof(char), strlen(num), result_file);
+        if((i + 1) % src.dim.width == 0){
+            fwrite("\n", sizeof(char), 1, result_file);
+        }
+        else{
+            fwrite(";", sizeof(char), 1, result_file);
+        }
+    }
 }
 
 //===============MATRIX MULTIPLICATION================//
@@ -152,12 +174,13 @@ void save_result_common(struct matrix matrix, char* file_name, int block_size, i
     rewind(file);
 
     //Step 1: read current results
-    struct matrix curr_results = read_matrix(file_name);
+    struct matrix results = read_matrix(file_name);
 
     //Step 2: merge matrixes
-    curr_results = merge_matrixes(curr_results, matrix, block_number * block_size, (block_number + 1) * block_size);
+    results = merge_matrixes(results, matrix, block_number * block_size, (block_number + 1) * block_size);
 
     //Step 3: write new results
+    
 
 
     fclose(file);
@@ -235,11 +258,7 @@ int main(int argc, char** argv){
 
     struct matrix A_matrix = read_matrix(A_matrix_file_name);
     struct matrix B_matrix = read_matrix(B_matrix_file_name);
-    struct matrix C_matrix = merge_matrixes(A_matrix, B_matrix, 1, 2);
-
-    for(int i = 0; i < 4; i++){
-        printf("%d\n", C_matrix.values[i]);
-    }
+    struct matrix C_matrix;
 
     multiply_matrixes(A_matrix, B_matrix, child_processes, max_time, common_flag);
 
