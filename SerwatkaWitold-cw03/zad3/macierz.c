@@ -9,6 +9,8 @@
 #include <ctype.h>
 #include <time.h>
 #include <sys/file.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 
 #define MAX_SIZE 1024
 
@@ -203,7 +205,7 @@ void save_result_separate(struct matrix matrix, int block_size, int block_number
     write_matrix(num, result);
 }
 
-void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, char* results_filename, int processes_number, int max_time, int common_flag){
+void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, char* results_filename, int processes_number, int max_time, int common_flag, int cpu_time, int virt_time){
     int counter = 0;
     pid_t child_pid[processes_number];
     int block_size = matrix2.dim.width/processes_number;
@@ -235,6 +237,27 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, char* resul
             child_pid[counter++] = pid;
         }
         else{
+            struct rlimit curr_lims;
+            if(getrlimit(RLIMIT_CPU, &curr_lims) != 0){
+                error(EXIT_FAILURE);
+            }
+            curr_lims.rlim_max = cpu_time;
+            curr_lims.rlim_cur = curr_lims.rlim_cur > cpu_time ? cpu_time : curr_lims.rlim_cur;
+
+            if(setrlimit(RLIMIT_CPU, &curr_lims) != 0){
+                error(EXIT_FAILURE);
+            }
+
+            if(getrlimit(RLIMIT_AS, &curr_lims) != 0){
+                error(EXIT_FAILURE);
+            }
+            curr_lims.rlim_max = virt_time;
+            curr_lims.rlim_cur = curr_lims.rlim_cur > virt_time ? virt_time : curr_lims.rlim_cur;
+
+            if(setrlimit(RLIMIT_AS, &curr_lims) != 0){
+                error(EXIT_FAILURE);
+            }
+
             clock_t start = clock();
 
             int m_counter = 0;
@@ -312,7 +335,7 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, char* resul
 //========================MAIN=======================//
 
 int main(int argc, char** argv){
-    if(argc != 5 || is_number(argv[1]) == 1 || is_number(argv[2]) == 0 || is_number(argv[3]) == 0 || is_number(argv[4]) == 1){
+    if(argc != 7 || is_number(argv[1]) == 1 || is_number(argv[2]) == 0 || is_number(argv[3]) == 0 || is_number(argv[4]) == 1 || is_number(argv[5]) == 0 || is_number(argv[6]) == 0){
         error(EXIT_FAILURE);
     }
 
@@ -322,6 +345,8 @@ int main(int argc, char** argv){
     int max_time = atoi(argv[3]);
     int common_flag;
     strcmp(argv[4], "common") == 0 ? common_flag = 1 : strcmp(argv[4], "separate") == 0 ? common_flag = 0 : error(EXIT_FAILURE);
+    int cpu_time = atoi(argv[5]);
+    int virt_time = atoi(argv[6]);
 
     FILE* source_file = fopen(source_file_name, "r");
     if(source_file == NULL){
@@ -337,7 +362,11 @@ int main(int argc, char** argv){
     struct matrix A_matrix = read_matrix(A_matrix_file_name);
     struct matrix B_matrix = read_matrix(B_matrix_file_name);
 
-    multiply_matrixes(A_matrix, B_matrix, C_matrix_file_name, child_processes, max_time, common_flag);
+    if(A_matrix.dim.width != B_matrix.dim.height){
+        error(EXIT_FAILURE);
+    }
+
+    multiply_matrixes(A_matrix, B_matrix, C_matrix_file_name, child_processes, max_time, common_flag, cpu_time, virt_time);
 
     return EXIT_SUCCESS;
 }

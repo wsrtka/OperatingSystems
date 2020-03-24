@@ -337,6 +337,10 @@ int main(int argc, char** argv){
     struct matrix A_matrix = read_matrix(A_matrix_file_name);
     struct matrix B_matrix = read_matrix(B_matrix_file_name);
 
+    if(A_matrix.dim.width != B_matrix.dim.height){
+        error(EXIT_FAILURE);
+    }
+
     multiply_matrixes(A_matrix, B_matrix, C_matrix_file_name, child_processes, max_time, common_flag);
 
     return EXIT_SUCCESS;
