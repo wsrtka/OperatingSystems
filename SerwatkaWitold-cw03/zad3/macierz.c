@@ -330,6 +330,17 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, char* resul
             }
         }
     }
+
+    struct rusage* usage = calloc(processes_number, sizeof(struct rusage));
+    if(getrusage(RUSAGE_CHILDREN, usage) != 0){
+        error(EXIT_FAILURE);
+    }
+
+    for(int i = 0; i < processes_number; i++){
+        printf("Raport zużycia dla procesu %d:\n", child_pid[i]);
+        printf("Zużycie czasu użytkownika: %ld\n", usage[i].ru_utime.tv_sec + usage[i].ru_utime.tv_usec);
+        printf("Zużycie czasu systemowego: ");
+    }
 }
 
 //========================MAIN=======================//
