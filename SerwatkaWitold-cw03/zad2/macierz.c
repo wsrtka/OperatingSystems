@@ -39,7 +39,8 @@ int is_number(char* str){
 
 struct matrix merge_matrixes(struct matrix dest, struct matrix src, int from, int to){
     for(int i = 0; i < dest.dim.height * dest.dim.width; i++){
-        if((i + 1) % dest.dim.width >= from && (i + 1) % dest.dim.width < to){
+        if(i % dest.dim.width >= from && i % dest.dim.width < to){
+            printf("merging value %d into position\n", src.values[i]);
             dest.values[i] = src.values[i];
         }
     }
@@ -81,6 +82,11 @@ struct matrix read_matrix(char* file_name){
         error(EXIT_FAILURE);
     }
 
+    while(ftrylockfile(file) != 0){
+
+        printf("file locking unsuccessfull");
+    }
+
     struct matrix_dim dim = get_matrix_size(file);
     struct matrix result;
 
@@ -104,6 +110,7 @@ struct matrix read_matrix(char* file_name){
 
     free(buffer);
 
+    funlockfile(file);
     fclose(file);
 
     return result;
@@ -111,19 +118,18 @@ struct matrix read_matrix(char* file_name){
 
 //==================WRITING MATRIXES================//
 
-void create_results_file(char* file_name, int matrix_width, int matrix_heigh){
+void create_results_file(char* file_name, int matrix_width, int matrix_height){
     FILE* result_file = fopen(file_name, "w");
     if(result_file == NULL){
-         printf("elo");
         error(EXIT_FAILURE);
     }
 
     rewind(result_file);
     char* safe_val = "0";
 
-    for(int i = 0; i < matrix_heigh * matrix_width; i++){
+    for(int i = 0; i < matrix_height * matrix_width; i++){
         fwrite(safe_val, sizeof(char), 1, result_file);
-        if((i + 1) % matrix_width == 0 && i + 1 != matrix_heigh * matrix_width){
+        if((i + 1) % matrix_width == 0 && i + 1 != matrix_height * matrix_width){
             fwrite("\n", sizeof(char), 1, result_file);
         }
         else{
@@ -140,6 +146,11 @@ int write_matrix(char* file_name, struct matrix src){
         return -1;
     }
 
+    while(ftrylockfile(result_file) != 0){
+
+        printf("file locking unsuccessfull");
+    }
+
     rewind(result_file);
     char num[MAX_SIZE/4];
 
@@ -154,6 +165,7 @@ int write_matrix(char* file_name, struct matrix src){
         }
     }
 
+    funlockfile(result_file);
     fclose(result_file);
 
     return 0;
@@ -167,6 +179,11 @@ void save_result_common(struct matrix matrix, char* file_name, int block_size, i
 
     //Step 2: merge matrixes
     results = merge_matrixes(results, matrix, block_number * block_size, (block_number + 1) * block_size);
+
+    printf("Current results matrix\n");
+    for(int i = 0; i < results.dim.height * results.dim.width; i++){
+        printf("%d",results.values[i]);
+    }
 
     //Step 3: write new results
     if(write_matrix(file_name, results) == -1){
@@ -195,6 +212,7 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, char* resul
     int counter = 0;
     pid_t child_pid[processes_number];
     int block_size = matrix2.dim.width/processes_number;
+    //dodaj wyjatki size = 0
 
     if(common_flag == 1){
         create_results_file(results_filename, matrix2.dim.width, matrix1.dim.height);
@@ -220,10 +238,11 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, char* resul
             result.values = calloc(result.dim.width * result.dim.height, sizeof(int));
             
             for(int i = counter * block_size; i < (counter + 1) * block_size; i++){ //kolumna macierzy b
-                for(int j = 0; j < matrix1.dim.width; j++){                         //rząd macierzy a
+                for(int j = 0; j < matrix1.dim.height; j++){                         //rząd macierzy a
                     for(int k = 0; k < matrix1.dim.width; k++){
                         result.values[result.dim.width * j + i] += matrix1.values[matrix1.dim.width * j + k] * matrix2.values[matrix2.dim.width * k + i];
                         m_counter++;
+
                         if(((double)(clock() - start) / CLOCKS_PER_SEC) >= (double)max_time){
                             exit(m_counter);
                         }
@@ -255,34 +274,33 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, char* resul
             error(EXIT_FAILURE);
         }
         else if(pasting == 0){
-            printf("child pasting");
             char* argv[3 + processes_number];
 
             argv[0] = "paste";
-            argv[1] = "-d\";\"";
+            argv[1] = "-d;";
 
-            char num[MAX_SIZE];
             for(int i = 0; i < processes_number; i++){
-                printf("%d\n", i);
-                sprintf(num, "%d", i);
-                printf("%s\n", num);
-                strcat(num, "result.txt");
-                printf("%s\n", num);
-                argv[i + 2] = num;
-                printf("%s\n", argv[i+2]);
+                char num[MAX_SIZE];
+                // printf("%d\n", i);
+                sprintf(num, "%dresult.txt", i);
+                // printf("%s\n", num);
+                // strcat(num, "result.txt");
+                // printf("%s\n", num);
+                argv[i + 2] = strdup(num);
+                // printf("%s\n", argv[i+2]);
             }
             argv[processes_number + 2] = NULL;
 
 
-            for(int i = 0; i < processes_number + 3; i++){
-                printf("%s ", argv[i]);
-            }
-            printf("\n");
+            // for(int i = 0; i < processes_number + 3; i++){
+            //     printf("%s ", argv[i]);
+            // }
+            // printf("\n");
 
-            for(int i = 0; i < processes_number + 3; i++){
-                printf("%d\n ", (int)&argv[i]);
-            }
-            printf("\n");
+            // for(int i = 0; i < processes_number + 3; i++){
+            //     printf("%d\n ", (int)&argv[i]);
+            // }
+            // printf("\n");
 
             
             int fd = open(results_filename, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
@@ -290,8 +308,6 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, char* resul
             close(fd);
 
             execvp("paste", argv);
-
-            exit(0);
         }
         else{
             int status;
