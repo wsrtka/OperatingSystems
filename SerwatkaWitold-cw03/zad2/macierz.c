@@ -174,7 +174,7 @@ void save_result_common(struct matrix matrix, char* file_name, int block_size, i
     }
 }
 
-void save_result_separate(struct matrix matrix, char* file_name, int block_size, int block_number){
+void save_result_separate(struct matrix matrix, int block_size, int block_number){
     struct matrix result;
 
     result.dim.width = block_size;
@@ -187,17 +187,17 @@ void save_result_separate(struct matrix matrix, char* file_name, int block_size,
 
     char num[MAX_SIZE/4];
     sprintf(num, "%d", block_number);
-    strcat(num, file_name);
+    strcat(num, "result.txt");
     write_matrix(num, result);
 }
 
-void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, int processes_number, int max_time, int common_flag){
+void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, char* results_filename, int processes_number, int max_time, int common_flag){
     int counter = 0;
     pid_t child_pid[processes_number];
     int block_size = matrix2.dim.width/processes_number;
 
     if(common_flag == 1){
-        create_results_file("results.txt", matrix2.dim.width, matrix1.dim.height);
+        create_results_file(results_filename, matrix2.dim.width, matrix1.dim.height);
     }
 
     while(counter < processes_number){
@@ -232,11 +232,10 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, int process
             }
 
             if(common_flag == 1){
-                save_result_common(result, "results.txt", block_size, counter);
+                save_result_common(result, results_filename, block_size, counter);
             }
             else{
-                printf("elo\n");
-                save_result_separate(result, "result.txt", block_size, counter);
+                save_result_separate(result, block_size, counter);
             }
 
             exit(m_counter);
@@ -250,34 +249,56 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, int process
     }
 
     if(common_flag == 0){
-        //złącz pliki poleceniem "paste"
         pid_t pasting = fork();
 
         if(pasting < 0){
             error(EXIT_FAILURE);
         }
         else if(pasting == 0){
-            const char* argv[3 + processes_number];
+            printf("child pasting");
+            char* argv[3 + processes_number];
 
             argv[0] = "paste";
-            argv[1] = "-d=;";
+            argv[1] = "-d\";\"";
 
-            char num[MAX_SIZE/4];
+            char num[MAX_SIZE];
             for(int i = 0; i < processes_number; i++){
+                printf("%d\n", i);
                 sprintf(num, "%d", i);
+                printf("%s\n", num);
                 strcat(num, "result.txt");
+                printf("%s\n", num);
                 argv[i + 2] = num;
+                printf("%s\n", argv[i+2]);
             }
             argv[processes_number + 2] = NULL;
 
-            int fd = open("results.txt", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+
+            for(int i = 0; i < processes_number + 3; i++){
+                printf("%s ", argv[i]);
+            }
+            printf("\n");
+
+            for(int i = 0; i < processes_number + 3; i++){
+                printf("%d\n ", (int)&argv[i]);
+            }
+            printf("\n");
+
+            
+            int fd = open(results_filename, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
             dup2(fd, 1);
             close(fd);
 
             execvp("paste", argv);
 
-            //exit xd
             exit(0);
+        }
+        else{
+            int status;
+            wait(&status);
+            if(status != 0){
+                error(EXIT_FAILURE);
+            }
         }
     }
 }
@@ -310,7 +331,7 @@ int main(int argc, char** argv){
     struct matrix A_matrix = read_matrix(A_matrix_file_name);
     struct matrix B_matrix = read_matrix(B_matrix_file_name);
 
-    multiply_matrixes(A_matrix, B_matrix, child_processes, max_time, common_flag);
+    multiply_matrixes(A_matrix, B_matrix, C_matrix_file_name, child_processes, max_time, common_flag);
 
     return EXIT_SUCCESS;
 }

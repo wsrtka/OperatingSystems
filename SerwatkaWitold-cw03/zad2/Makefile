@@ -1,8 +1,11 @@
 clean:
-	rm macierz results.txt
+	rm macierz results.txt helper
+	find ./tests -name 'matrix*' -exec rm  {} \;
+	rm ./tests/source.txt
 
 compile:
 	gcc -Wall macierz.c -o macierz
+	gcc -Wall helper.c -o helper
 
 separate:
 	./macierz source.txt 1 2 separate
@@ -20,3 +23,7 @@ gen:
 
 test:
 	./helper 1 2 5
+
+debug:
+	make compile
+	make test

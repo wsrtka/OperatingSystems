@@ -2,6 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
 
 #define MAX_SIZE 256
 
@@ -38,7 +43,8 @@ int generate_number(){
 }
 
 char* generate_matrix(int width, int height, int count){
-    char file_name[] = "./tests/matrix";
+    char* file_name = malloc(sizeof(char) * MAX_SIZE);
+    strcpy(file_name, "./tests/matrix");
     char num[MAX_SIZE];
     sprintf(num, "%d", count);
     strcat(file_name, num);
@@ -96,10 +102,8 @@ struct matrix_dim get_matrix_size(FILE* file){
 }
 
 struct matrix read_matrix(char* file_name){
-    printf("tutaj?");
     FILE* file = fopen(file_name, "r");
     if(file == NULL){
-        printf("tam?");
         error(EXIT_FAILURE);
     }
 
@@ -172,19 +176,76 @@ int main(int argc, char* argv[]){
     }
 
     int width_a, height_a, width_b;
-    char* A_matrix_file;
-    char* B_matrix_file;
+    char* A_matrix_file = malloc(sizeof(char) * MAX_SIZE);
+    char* B_matrix_file = malloc(sizeof(char) * MAX_SIZE);
+    char* C_matrix_file = malloc(sizeof(char) * MAX_SIZE);
+    struct matrix A_matrix, B_matrix;
+    int fd;
 
     for(int i = 0; i < matrix_pairs * 2; i += 2){
         width_a = random() % (max_size - min_size) + min_size;
         width_b = random() % (max_size - min_size) + min_size;
         height_a = random() % (max_size - min_size) + min_size;
 
-        A_matrix_file = generate_matrix(width_a, height_a, i);
-        B_matrix_file = generate_matrix(width_b, width_a, i + 1);
+        strcpy(A_matrix_file, generate_matrix(width_a, height_a, i));
+        strcpy(B_matrix_file, generate_matrix(width_b, width_a, i + 1));
 
-        printf("tu?");
+        strcpy(C_matrix_file, "./tests/result");
 
-        assert_multiplication_result(read_matrix(A_matrix_file), read_matrix(B_matrix_file), read_matrix("./results.txt"));
+        char num[MAX_SIZE];
+        sprintf(num, "%d", i/2);
+        strcat(C_matrix_file, num);
+        strcat(C_matrix_file, ".txt");      
+
+        FILE* source = fopen("./tests/source.txt", "w");
+
+        fwrite(A_matrix_file, sizeof(char), strlen(A_matrix_file), source);
+        fwrite(" ", sizeof(char), 1, source);
+        fwrite(B_matrix_file, sizeof(char), strlen(B_matrix_file), source);
+        fwrite(" ", sizeof(char), 1, source);
+        fwrite(C_matrix_file, sizeof(char), strlen(C_matrix_file), source);
+
+        fclose(source);
+
+        A_matrix = read_matrix(A_matrix_file);
+        B_matrix = read_matrix(B_matrix_file);
+
+        pid_t child = fork();
+        int status;
+
+        if(child < 0){
+            error(EXIT_FAILURE);
+        }
+        else if(child == 0){
+            char processes_number[MAX_SIZE];
+            char time[MAX_SIZE];
+            char option[MAX_SIZE];
+
+            sprintf(processes_number, "%d", (random() % width_b) + 1);
+            sprintf(time, "%d", (random() % 20) + 1);
+            strcpy(option, (random() % 2) == 0 ? "common" : "separate");
+
+             execl(
+                "./macierz",
+                "./macierz", 
+                "./tests/source.txt", 
+                processes_number, 
+                time, 
+                option, 
+                NULL
+            );
+
+            exit(0);
+        }
+        else{
+            wait(&status);
+            if(status != 0){
+                error(EXIT_FAILURE);
+            }
+        }
+
+        assert_multiplication_result(A_matrix, B_matrix, read_matrix(C_matrix_file));
     }
+
+    return 0;
 }
