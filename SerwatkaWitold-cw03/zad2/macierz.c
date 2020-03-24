@@ -8,6 +8,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
+#include <sys/file.h>
 
 #define MAX_SIZE 1024
 
@@ -73,6 +74,8 @@ struct matrix_dim get_matrix_size(FILE* file){
     result.height = height;
     result.width = width;
 
+    printf("%d %d\n", width, height);
+
     return result;
 }
 
@@ -80,11 +83,6 @@ struct matrix read_matrix(char* file_name){
     FILE* file = fopen(file_name, "r");
     if(file == NULL){
         error(EXIT_FAILURE);
-    }
-
-    while(ftrylockfile(file) != 0){
-
-        printf("file locking unsuccessfull");
     }
 
     struct matrix_dim dim = get_matrix_size(file);
@@ -146,18 +144,13 @@ int write_matrix(char* file_name, struct matrix src){
         return -1;
     }
 
-    while(ftrylockfile(result_file) != 0){
-
-        printf("file locking unsuccessfull");
-    }
-
     rewind(result_file);
     char num[MAX_SIZE/4];
 
     for(int i = 0; i < src.dim.width * src.dim.height; i++){
         sprintf(num, "%d", src.values[i]);
         fwrite(num, sizeof(char), strlen(num), result_file);
-        if((i + 1) % src.dim.width == 0){
+        if((i + 1) % src.dim.width == 0 && i + 1 != src.dim.width * src.dim.height){
             fwrite("\n", sizeof(char), 1, result_file);
         }
         else{
@@ -165,7 +158,6 @@ int write_matrix(char* file_name, struct matrix src){
         }
     }
 
-    funlockfile(result_file);
     fclose(result_file);
 
     return 0;
@@ -174,21 +166,32 @@ int write_matrix(char* file_name, struct matrix src){
 //===============MATRIX MULTIPLICATION================//
 
 void save_result_common(struct matrix matrix, char* file_name, int block_size, int block_number){
+    int fd = open(file_name, O_RDWR);
+    flock(fd, LOCK_EX);
     //Step 1: read current results
     struct matrix results = read_matrix(file_name);
 
     //Step 2: merge matrixes
     results = merge_matrixes(results, matrix, block_number * block_size, (block_number + 1) * block_size);
 
+    printf("Current merge matrix\n");
+    for(int i = 0; i < results.dim.height * results.dim.width; i++){
+        printf("%d",matrix.values[i]);
+    }
+    printf("\n");
+
     printf("Current results matrix\n");
     for(int i = 0; i < results.dim.height * results.dim.width; i++){
         printf("%d",results.values[i]);
     }
+    printf("\n");
 
     //Step 3: write new results
     if(write_matrix(file_name, results) == -1){
         error(EXIT_FAILURE);
     }
+    flock(fd, LOCK_UN);
+    close(fd);
 }
 
 void save_result_separate(struct matrix matrix, int block_size, int block_number){
@@ -247,6 +250,7 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, char* resul
                             exit(m_counter);
                         }
                     }
+                    printf("%d\n",result.values[result.dim.width * j + i]);
                 }
             }
 
