@@ -50,6 +50,13 @@ struct matrix merge_matrixes(struct matrix dest, struct matrix src, int from, in
     return dest;
 }
 
+void print_usage(struct rusage* prev, struct rusage* curr, pid_t pid){
+    printf("Raport zużycia dla procesu %d:\n", pid);
+    printf("Zużycie czasu użytkownika: %lds, %ldms\n", curr->ru_utime.tv_sec - prev->ru_utime.tv_sec, curr->ru_utime.tv_usec - prev->ru_utime.tv_sec);
+    printf("Zużycie czasu systemowego: %lds, %ldms\n", curr->ru_stime.tv_sec - prev->ru_stime.tv_sec, curr->ru_stime.tv_usec - prev->ru_stime.tv_sec);
+    printf("================================================\n");
+}
+
 //==================READING MATRIXES================//
 
 struct matrix_dim get_matrix_size(FILE* file){
@@ -214,13 +221,8 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, char* resul
         block_size = 1;
     }
 
-    while(block_size % processes_number != 0){
-        if(block_size > processes_number){
-            block_size--;
-        }
-        else{
-            block_size++;
-        }
+    while(block_size * processes_number < matrix2.dim.width){
+        block_size++;
     }
 
     if(common_flag == 1){
@@ -229,6 +231,11 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, char* resul
 
     while(counter < processes_number){
         pid_t pid = fork();
+
+        struct rusage* usage1 = calloc(1, sizeof(struct rusage));
+        if(getrusage(RUSAGE_CHILDREN, usage1) != 0){
+            error(EXIT_FAILURE);
+        }
 
         if(pid < 0){
             error(EXIT_FAILURE);
@@ -289,6 +296,13 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, char* resul
 
             exit(m_counter);
         }
+
+        struct rusage* usage2 = calloc(1, sizeof(struct rusage));
+        if(getrusage(RUSAGE_CHILDREN, usage2) != 0){
+            error(EXIT_FAILURE);
+        }
+
+        print_usage(usage1, usage2, child_pid[counter-1]);
     }
 
     for(int i = 0; i < processes_number; i++){
@@ -329,17 +343,6 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, char* resul
                 error(EXIT_FAILURE);
             }
         }
-    }
-
-    struct rusage* usage = calloc(processes_number, sizeof(struct rusage));
-    if(getrusage(RUSAGE_CHILDREN, usage) != 0){
-        error(EXIT_FAILURE);
-    }
-
-    for(int i = 0; i < processes_number; i++){
-        printf("Raport zużycia dla procesu %d:\n", child_pid[i]);
-        printf("Zużycie czasu użytkownika: %ld\n", usage[i].ru_utime.tv_sec + usage[i].ru_utime.tv_usec);
-        printf("Zużycie czasu systemowego: ");
     }
 }
 

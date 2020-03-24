@@ -1,1 +1,0 @@
-./tests/matrix6.txt ./tests/matrix7.txt ./tests/result3.txt

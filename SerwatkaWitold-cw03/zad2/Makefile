@@ -1,11 +1,16 @@
+cc = gcc -Wall
+
+all: clean compile test
+
+compile:
+	$(cc) macierz.c -o macierz
+	$(cc) helper.c -o helper
+
 clean:
 	rm -f macierz results.txt helper
 	find ./tests -name 'matrix*' -exec rm {} \;
+	find ./tests -name 'result*' -exec rm {} \;
 	rm -f ./tests/source.txt
-
-compile:
-	gcc -Wall macierz.c -o macierz
-	gcc -Wall helper.c -o helper
 
 separate:
 	./macierz source.txt 1 2 separate
@@ -13,20 +18,10 @@ separate:
 common:
 	./macierz source.txt 1 2 common
 
-all:
-	make clean
-	make compile
-	make test
-
-gen:
-	gcc -Wall helper.c -o helper
-
 test:
 	./helper 2 2 5
-
-debug:
-	make compile
-	make test
+	./helper 6 5 10
+	./helper 10 10 15
 
 setup:
 	mkdir tests
