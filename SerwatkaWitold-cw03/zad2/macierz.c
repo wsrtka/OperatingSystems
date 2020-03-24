@@ -41,7 +41,6 @@ int is_number(char* str){
 struct matrix merge_matrixes(struct matrix dest, struct matrix src, int from, int to){
     for(int i = 0; i < dest.dim.height * dest.dim.width; i++){
         if(i % dest.dim.width >= from && i % dest.dim.width < to){
-            printf("merging value %d into position\n", src.values[i]);
             dest.values[i] = src.values[i];
         }
     }
@@ -73,8 +72,6 @@ struct matrix_dim get_matrix_size(FILE* file){
     struct matrix_dim result;
     result.height = height;
     result.width = width;
-
-    printf("%d %d\n", width, height);
 
     return result;
 }
@@ -108,7 +105,6 @@ struct matrix read_matrix(char* file_name){
 
     free(buffer);
 
-    funlockfile(file);
     fclose(file);
 
     return result;
@@ -150,8 +146,10 @@ int write_matrix(char* file_name, struct matrix src){
     for(int i = 0; i < src.dim.width * src.dim.height; i++){
         sprintf(num, "%d", src.values[i]);
         fwrite(num, sizeof(char), strlen(num), result_file);
-        if((i + 1) % src.dim.width == 0 && i + 1 != src.dim.width * src.dim.height){
-            fwrite("\n", sizeof(char), 1, result_file);
+        if((i + 1) % src.dim.width == 0){
+            if(i + 1 != src.dim.width * src.dim.height){
+                fwrite("\n", sizeof(char), 1, result_file);
+            }
         }
         else{
             fwrite(";", sizeof(char), 1, result_file);
@@ -174,18 +172,6 @@ void save_result_common(struct matrix matrix, char* file_name, int block_size, i
     //Step 2: merge matrixes
     results = merge_matrixes(results, matrix, block_number * block_size, (block_number + 1) * block_size);
 
-    printf("Current merge matrix\n");
-    for(int i = 0; i < results.dim.height * results.dim.width; i++){
-        printf("%d",matrix.values[i]);
-    }
-    printf("\n");
-
-    printf("Current results matrix\n");
-    for(int i = 0; i < results.dim.height * results.dim.width; i++){
-        printf("%d",results.values[i]);
-    }
-    printf("\n");
-
     //Step 3: write new results
     if(write_matrix(file_name, results) == -1){
         error(EXIT_FAILURE);
@@ -197,12 +183,18 @@ void save_result_common(struct matrix matrix, char* file_name, int block_size, i
 void save_result_separate(struct matrix matrix, int block_size, int block_number){
     struct matrix result;
 
-    result.dim.width = block_size;
+    result.dim.width = (block_number + 1) * block_size > matrix.dim.width ? matrix.dim.width - (block_size * block_number) : block_size ;
+
+    // printf("%d\n", result.dim.width);
     result.dim.height = matrix.dim.height;
     result.values = calloc(result.dim.width * result.dim.height, sizeof(int));
 
-    for(int i = 0; i < result.dim.width * result.dim.height; i++){
-        result.values[i] = matrix.values[(block_size * block_number) + (i % matrix.dim.width) + matrix.dim.width * (i / block_size)];
+    int counter = 0;
+
+    for(int i = 0; i < matrix.dim.width * matrix.dim.height && counter < result.dim.width * result.dim.height; i++){
+        if(i % matrix.dim.width >= block_size * block_number && i % matrix.dim.width < block_size * (block_number + 1) ){
+            result.values[counter++] = matrix.values[i];
+        }
     }
 
     char num[MAX_SIZE/4];
@@ -215,7 +207,19 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, char* resul
     int counter = 0;
     pid_t child_pid[processes_number];
     int block_size = matrix2.dim.width/processes_number;
-    //dodaj wyjatki size = 0
+    
+    if(block_size == 0){
+        block_size = 1;
+    }
+
+    while(block_size % processes_number != 0){
+        if(block_size > processes_number){
+            block_size--;
+        }
+        else{
+            block_size++;
+        }
+    }
 
     if(common_flag == 1){
         create_results_file(results_filename, matrix2.dim.width, matrix1.dim.height);
@@ -240,7 +244,7 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, char* resul
             result.dim.height = matrix1.dim.height;
             result.values = calloc(result.dim.width * result.dim.height, sizeof(int));
             
-            for(int i = counter * block_size; i < (counter + 1) * block_size; i++){ //kolumna macierzy b
+            for(int i = counter * block_size; i < (counter + 1) * block_size && i < result.dim.width; i++){ //kolumna macierzy b
                 for(int j = 0; j < matrix1.dim.height; j++){                         //rząd macierzy a
                     for(int k = 0; k < matrix1.dim.width; k++){
                         result.values[result.dim.width * j + i] += matrix1.values[matrix1.dim.width * j + k] * matrix2.values[matrix2.dim.width * k + i];
@@ -250,7 +254,6 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, char* resul
                             exit(m_counter);
                         }
                     }
-                    printf("%d\n",result.values[result.dim.width * j + i]);
                 }
             }
 
@@ -285,27 +288,10 @@ void multiply_matrixes(struct matrix matrix1, struct matrix matrix2, char* resul
 
             for(int i = 0; i < processes_number; i++){
                 char num[MAX_SIZE];
-                // printf("%d\n", i);
                 sprintf(num, "%dresult.txt", i);
-                // printf("%s\n", num);
-                // strcat(num, "result.txt");
-                // printf("%s\n", num);
                 argv[i + 2] = strdup(num);
-                // printf("%s\n", argv[i+2]);
             }
             argv[processes_number + 2] = NULL;
-
-
-            // for(int i = 0; i < processes_number + 3; i++){
-            //     printf("%s ", argv[i]);
-            // }
-            // printf("\n");
-
-            // for(int i = 0; i < processes_number + 3; i++){
-            //     printf("%d\n ", (int)&argv[i]);
-            // }
-            // printf("\n");
-
             
             int fd = open(results_filename, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
             dup2(fd, 1);

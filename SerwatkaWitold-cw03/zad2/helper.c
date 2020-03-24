@@ -183,80 +183,80 @@ int main(int argc, char* argv[]){
     char* C_matrix_file = malloc(sizeof(char) * MAX_SIZE);
     struct matrix A_matrix, B_matrix, C_matrix;
 
-    A_matrix_file = "./tests/matrix0.txt";
-    B_matrix_file = "./tests/matrix1.txt";
-    C_matrix_file = "./tests/result0.txt";
+    // A_matrix_file = "./tests/matrix0.txt";
+    // B_matrix_file = "./tests/matrix1.txt";
+    // C_matrix_file = "./tests/result0.txt";
 
-    A_matrix = read_matrix(A_matrix_file);
-    B_matrix = read_matrix(B_matrix_file);
-    C_matrix = read_matrix(C_matrix_file);
+    // A_matrix = read_matrix(A_matrix_file);
+    // B_matrix = read_matrix(B_matrix_file);
+    // C_matrix = read_matrix(C_matrix_file);
 
-    assert_multiplication_result(A_matrix, B_matrix, C_matrix);
+    // assert_multiplication_result(A_matrix, B_matrix, C_matrix);
 
-    // for(int i = 0; i < matrix_pairs * 2; i += 2){
-    //     width_a = random() % (max_size - min_size) + min_size;
-    //     width_b = random() % (max_size - min_size) + min_size;
-    //     height_a = random() % (max_size - min_size) + min_size;
+    for(int i = 0; i < matrix_pairs * 2; i += 2){
+        width_a = random() % (max_size - min_size) + min_size;
+        width_b = random() % (max_size - min_size) + min_size;
+        height_a = random() % (max_size - min_size) + min_size;
 
-    //     strcpy(A_matrix_file, generate_matrix(width_a, height_a, i));
-    //     strcpy(B_matrix_file, generate_matrix(width_b, width_a, i + 1));
+        strcpy(A_matrix_file, generate_matrix(width_a, height_a, i));
+        strcpy(B_matrix_file, generate_matrix(width_b, width_a, i + 1));
 
-    //     strcpy(C_matrix_file, "./tests/result");
+        strcpy(C_matrix_file, "./tests/result");
 
-    //     char num[MAX_SIZE];
-    //     sprintf(num, "%d", i/2);
-    //     strcat(C_matrix_file, num);
-    //     strcat(C_matrix_file, ".txt");      
+        char num[MAX_SIZE];
+        sprintf(num, "%d", i/2);
+        strcat(C_matrix_file, num);
+        strcat(C_matrix_file, ".txt");      
 
-    //     FILE* source = fopen("./tests/source.txt", "w");
+        FILE* source = fopen("./tests/source.txt", "w");
 
-    //     fwrite(A_matrix_file, sizeof(char), strlen(A_matrix_file), source);
-    //     fwrite(" ", sizeof(char), 1, source);
-    //     fwrite(B_matrix_file, sizeof(char), strlen(B_matrix_file), source);
-    //     fwrite(" ", sizeof(char), 1, source);
-    //     fwrite(C_matrix_file, sizeof(char), strlen(C_matrix_file), source);
+        fwrite(A_matrix_file, sizeof(char), strlen(A_matrix_file), source);
+        fwrite(" ", sizeof(char), 1, source);
+        fwrite(B_matrix_file, sizeof(char), strlen(B_matrix_file), source);
+        fwrite(" ", sizeof(char), 1, source);
+        fwrite(C_matrix_file, sizeof(char), strlen(C_matrix_file), source);
 
-    //     fclose(source);
+        fclose(source);
 
-    //     A_matrix = read_matrix(A_matrix_file);
-    //     B_matrix = read_matrix(B_matrix_file);
+        A_matrix = read_matrix(A_matrix_file);
+        B_matrix = read_matrix(B_matrix_file);
 
-    //     pid_t child = fork();
-    //     int status;
+        pid_t child = fork();
+        int status;
 
-    //     if(child < 0){
-    //         error(EXIT_FAILURE);
-    //     }
-    //     else if(child == 0){
-    //         char processes_number[MAX_SIZE];
-    //         char time[MAX_SIZE];
-    //         char option[MAX_SIZE];
+        if(child < 0){
+            error(EXIT_FAILURE);
+        }
+        else if(child == 0){
+            char processes_number[MAX_SIZE];
+            char time[MAX_SIZE];
+            char option[MAX_SIZE];
 
-    //         sprintf(processes_number, "%d", (int)(random() % width_b) + 1);
-    //         sprintf(time, "%d", (int)(random() % 20) + 1);
-    //         strcpy(option, (random() % 2) == 0 ? "common" : "separate");
+            sprintf(processes_number, "%d", (int)(random() % width_b) + 1);
+            sprintf(time, "%d", (int)(random() % 20) + 1);
+            strcpy(option, (random() % 2) == 0 ? "common" : "separate");
 
-    //          execl(
-    //             "./macierz",
-    //             "./macierz", 
-    //             "./tests/source.txt", 
-    //             processes_number, 
-    //             time, 
-    //             option, 
-    //             NULL
-    //         );
+             execl(
+                "./macierz",
+                "./macierz", 
+                "./tests/source.txt", 
+                processes_number, 
+                time, 
+                option, 
+                NULL
+            );
 
-    //         exit(0);
-    //     }
-    //     else{
-    //         wait(&status);
-    //         if(status != 0){
-    //             error(EXIT_FAILURE);
-    //         }
-    //     }
+            exit(0);
+        }
+        else{
+            wait(&status);
+            if(status != 0){
+                error(EXIT_FAILURE);
+            }
+        }
 
-    //     assert_multiplication_result(A_matrix, B_matrix, read_matrix(C_matrix_file));
-    // }
+        assert_multiplication_result(A_matrix, B_matrix, read_matrix(C_matrix_file));
+    }
 
     return 0;
 }
