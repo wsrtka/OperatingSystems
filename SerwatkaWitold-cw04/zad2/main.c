@@ -11,7 +11,7 @@
 int fd;
 
 void error(){
-    printf("Program usage: ./main <option>\n");
+    printf("Program usage: ./main <fork|exec> <option>\n");
     exit(EXIT_FAILURE);
 }
 
@@ -34,25 +34,36 @@ void sig_handler(){
 }
 
 int main(int argc, char** argv){
-    if(argc != 2){
+    if(argc != 3){
         printf("Nieprawidłowa liczba argumentów\n");
         error();
     }
 
-    fd = open("raport2.txt", O_WRONLY | O_APPEND);
-    if(fd == -1){
-        printf("Nie udało się otworzyć pliku 'raport2.txt'\n");
+    // fd = open("raport2.txt", O_WRONLY | O_APPEND);
+    // if(fd == -1){
+    //     printf("Nie udało się otworzyć pliku 'raport2.txt'\n");
+    // }
+    
+    int exec_flag;
+    if(strcmp(argv[1], "fork") == 0){
+        exec_flag = 0;
+    }
+    else if(strcmp(argv[1], "exec") == 0){
+        exec_flag = 1;
+    }
+    else{
+        error();
     }
 
     signal(SIGUSR1, sig_handler);
 
-    if(strcmp(argv[1], "ignore") == 0){
+    if(strcmp(argv[2], "ignore") == 0){
         signal(SIGUSR1, SIG_IGN);
     }
-    else if(strcmp(argv[1], "handler") == 0){
+    else if(strcmp(argv[2], "handler") == 0){
         signal(SIGUSR1, handler);
     }
-    else if(strcmp(argv[1], "mask") == 0 || strcmp(argv[1], "pending") == 0){
+    else if(strcmp(argv[2], "mask") == 0 || strcmp(argv[2], "pending") == 0){
         sigset_t mask;
         sigemptyset(&mask);
         sigaddset(&mask, SIGUSR1);
