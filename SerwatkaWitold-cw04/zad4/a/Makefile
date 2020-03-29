@@ -2,10 +2,10 @@ cc = gcc -Wall
 
 all: clean catcher sender
 
-catcher: clean
+catcher: 
 	$(cc) catcher.c -o catcher
 
-sender: clean	
+sender: 	
 	$(cc) sender.c -o sender
 
 clean:

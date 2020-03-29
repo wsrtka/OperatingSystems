@@ -39,6 +39,7 @@ void handler_kill(int sig_num, siginfo_t* info, void* context){
     }
     else if(sig_num == SIGUSR2){
         printf("Received %d SIGUSR1 signals in total.\n", counter);
+        return;
     }
     else{
         printf("Received signal number %d.\n", sig_num);
