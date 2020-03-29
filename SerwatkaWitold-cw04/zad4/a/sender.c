@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <string.h>
+#include <ctype.h>
 
 //=============HELPER FUNCTIONS=============//
 
@@ -23,15 +24,61 @@ int is_number(char* str){
     return 1;
 }
 
-//=================KILL====================//
+//==============RECEIVE===================//
 
-void send_kill(int pid, int count){
-    
+void handler_kill(int sig_num, siginfo_t* info, void* context){
+    static int counter = 0;
+
+    if(sig_num == SIGUSR1){
+        counter++;
+        sigset_t mask;
+        sigfillset(&mask);
+        sigdelset(&mask, SIGUSR1);
+        sigdelset(&mask, SIGUSR2);
+        sigsuspend(&mask);
+    }
+    else if(sig_num == SIGUSR2){
+        printf("Received %d SIGUSR1 signals in total.\n", counter);
+    }
+    else{
+        printf("Received signal number %d.\n", sig_num);
+    }
 }
 
-//==============SIGQUEUE===================//
+void receive_kill(){
+    struct sigaction act;
 
-//================SIGRT====================//
+    sigfillset(&act.sa_mask);
+    sigdelset(&act.sa_mask, SIGUSR1);
+    sigdelset(&act.sa_mask, SIGUSR2);
+
+    act.sa_sigaction = handler_kill;
+    act.sa_flags = SA_SIGINFO;
+
+    if(sigaction(SIGUSR1, &act, NULL) == -1){
+        printf("Could not set action for SIGUSR1.\n");
+        error();
+    }
+    if(sigaction(SIGUSR2, &act, NULL) == -1){
+        printf("Could not set action for SIGUSR2.\n");
+        error();
+    }
+
+    pause();
+}
+
+//=================SEND====================//
+
+void send_kill(int pid, int count){
+    for(int i = 0; i < count; i++){
+        kill(pid, SIGUSR1);
+        sleep(0.5);
+    }
+
+    kill(pid, SIGUSR2);
+
+    receive_kill();
+}
 
 //=================MAIN====================//
 
@@ -45,7 +92,7 @@ int main(int argc, char** argv){
     char* mode = argv[3];
 
     if(strcmp(mode, "kill") == 0){
-
+        send_kill(catcher_pid, signals_count);
     }
     else if(strcmp(mode, "sigqueue") == 0){
 
@@ -56,6 +103,8 @@ int main(int argc, char** argv){
     else{
         error();
     }
+
+    printf("Should have received %d signals.\n", signals_count);
 
     return 0;
 }
