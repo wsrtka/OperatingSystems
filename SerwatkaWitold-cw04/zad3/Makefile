@@ -1,6 +1,6 @@
-cc = gcc -Wall -D_POSIX_C_SOURCE=199309L
+cc = gcc -Wall
 
-main:
+main: clean
 	$(cc) main.c -o main
 
 clean:
