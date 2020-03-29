@@ -23,18 +23,20 @@ int is_number(char* str){
     return 1;
 }
 
+//=================KILL====================//
+
+void send_kill(int pid, int count){
+    
+}
+
+//==============SIGQUEUE===================//
+
+//================SIGRT====================//
+
 //=================MAIN====================//
 
 int main(int argc, char** argv){
-    if(argc != 4 || is_number(argv[1]) == 0 || is_number(argv[2]) == 0 || is_number(argv[3]) == 1){
-        error();
-    }
+    
 
-    int catcher_pid = atoi(argv[1]);
-    int signals_count = atoi(argv[2]);
-    char* mode = argv[3];
-
-    if(strcmp(mode, "kill") == 0){
-        
-    }
+    return 0;
 }
