@@ -43,7 +43,7 @@ int main(int argc, char** argv){
     // if(fd == -1){
     //     printf("Nie udało się otworzyć pliku 'raport2.txt'\n");
     // }
-    
+
     int exec_flag;
     if(strcmp(argv[1], "fork") == 0){
         exec_flag = 0;
@@ -79,24 +79,59 @@ int main(int argc, char** argv){
 
     raise(SIGUSR1);
 
-    if(strcmp(argv[1], "pending") == 0){
-        sigset_t check;
-        
+    sigset_t check;
+
+    if(strcmp(argv[2], "ignore") == 0){
+        printf("Signal is being ignored in parent\n");
+    }
+    else if(strcmp(argv[2], "mask") == 0){
+        printf("Signal is being masked in parent\n");
+    }
+    else if(strcmp(argv[2], "pending") == 0){
+        sigpending(&check);
+        if(sigismember(&check, SIGUSR1) == 1){
+            printf("SIGUSR1 is pending in parent\n");
+        }
+        else{
+            printf("SIGUSR1 is not pending in parent");
+        }
     }
 
     pid_t pid = fork();
 
     if(pid < 0){
+        printf("Fork error\n");
         error();
     }
     else if(pid == 0){
+        if(exec_flag == 0){
+            if(strcmp(argv[2], "pending") == 0){
+                sigpending(&check);
+                if(sigismember(&check, SIGUSR1) == 1){
+                    printf("Child reports: SIGUSR1 is pending in parent\n");
+                }
+                else{
+                    printf("Child reports: SIGUSR1 is not pending in parent");
+                }
+            }
 
-    }
-    else{
-        
+            raise(SIGUSR1);
+
+            if(strcmp(argv[2], "ignore") == 0){
+                printf("Signal is being ignored in child\n");
+            }
+            else if(strcmp(argv[2], "mask") == 0){
+                printf("Signal is being masked in child\n");
+            }
+
+            exit(0);
+        }
+        else{
+            
+        }
     }
 
-    close(fd);
+    // close(fd);
 
     return 0;
 }
