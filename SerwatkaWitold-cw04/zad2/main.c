@@ -8,8 +8,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-int fd;
-
 void error(){
     printf("Program usage: ./main <fork|exec> <option>\n");
     exit(EXIT_FAILURE);
@@ -18,19 +16,11 @@ void error(){
 void handler(){
     char* msg = "Otrzymano sygnał SIGUSR1\n";
     printf("%s", msg);
-    if(write(fd, msg, strlen(msg)) != strlen(msg)){
-        printf("Nie udało się zapisać wyniku do pliku\n");
-        error();
-    }
 }
 
 void sig_handler(){
     char* msg = "Podstawowy handler otrzymał sygnał SIGUSR1\n";
     printf("%s", msg);
-    if(write(fd, msg, strlen(msg)) != strlen(msg)){
-        printf("nie udało się zapisać wyniku do pliku\n");
-        error();
-    }
 }
 
 int main(int argc, char** argv){
@@ -38,11 +28,6 @@ int main(int argc, char** argv){
         printf("Nieprawidłowa liczba argumentów\n");
         error();
     }
-
-    // fd = open("raport2.txt", O_WRONLY | O_APPEND);
-    // if(fd == -1){
-    //     printf("Nie udało się otworzyć pliku 'raport2.txt'\n");
-    // }
 
     int exec_flag;
     if(strcmp(argv[1], "fork") == 0){
@@ -87,6 +72,9 @@ int main(int argc, char** argv){
     else if(strcmp(argv[2], "mask") == 0){
         printf("Signal is being masked in parent\n");
     }
+    else if(strcmp(argv[2], "handler") == 0){
+        printf("Signal is being handled in parent\n");
+    }
     else if(strcmp(argv[2], "pending") == 0){
         sigpending(&check);
         if(sigismember(&check, SIGUSR1) == 1){
@@ -111,7 +99,7 @@ int main(int argc, char** argv){
                     printf("Child reports: SIGUSR1 is pending in parent\n");
                 }
                 else{
-                    printf("Child reports: SIGUSR1 is not pending in parent");
+                    printf("Child reports: SIGUSR1 is not pending in parent\n");
                 }
             }
 
@@ -123,15 +111,20 @@ int main(int argc, char** argv){
             else if(strcmp(argv[2], "mask") == 0){
                 printf("Signal is being masked in child\n");
             }
+            else if(strcmp(argv[2], "handler") == 0){
+                printf("Signal is being handled in child\n");
+            }
 
             exit(0);
         }
         else{
-            
+            execlp("./exec", "./exec", argv[2], NULL);
         }
     }
 
-    // close(fd);
+    wait(NULL);
+
+    printf("End of experiment\n\n");
 
     return 0;
 }
