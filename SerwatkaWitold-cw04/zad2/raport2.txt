@@ -1,0 +1,3 @@
+Wnioski:
+- po wywołaniu funkcji fork, potomek dziedziczy ignorowanie, handler i maskowanie po przodku. Nie widzi blokowania sygnału w przodku.
+- po wywołaniu funkcji exec potomek zachowuje się podobnie jak w pierwszym przypadku, ale nie dziedziczy handlera po przodku.
