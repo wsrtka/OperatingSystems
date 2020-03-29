@@ -41,4 +41,13 @@ int main(){
     child_act.sa_flags = SA_SIGINFO;
     sigemptyset(&child_act.sa_mask);
     sigaction(SIGFPE, &child_act, NULL);
+
+    pid_t pid = fork();
+
+    if(pid == 0){
+        int div = 1/0;
+        printf("Successfully divided by 0\n");
+    }
+
+    wait(NULL);
 }
