@@ -35,6 +35,18 @@ void send_kill(int pid, int count){
     kill(pid, SIGUSR2);
 }
 
+void send_queue(int pid, int count){
+    union sigval u;
+    u.sival_int = 0;
+
+    for(int i = 0; i < count; i++){
+        sigqueue(pid, SIGUSR1, u);
+        sleep(0.5);
+    }
+
+    sigqueue(pid, SIGUSR2, u);
+}
+
 //==============RECEIVE===================//
 
 void handler_kill(int sig_num, siginfo_t* info, void* context){
@@ -80,6 +92,52 @@ void receive_kill(){
     pause();
 }
 
+void handler_queue(int sig_num, siginfo_t* info, void* context){
+    static int counter = 0;
+
+    if(sig_num == SIGUSR1){
+        union sigval u;
+        u.sival_int = ++counter;
+        sigqueue(info->si_pid, SIGUSR1, u);
+
+        sigset_t mask;
+        sigfillset(&mask);
+        sigdelset(&mask, SIGUSR1);
+        sigdelset(&mask, SIGUSR2);
+        sigsuspend(&mask);
+    }
+    else if(sig_num == SIGUSR2){
+        printf("Received %d SIGUSR1 signals in total.\n", counter);
+        
+        send_queue(info->si_pid, counter);
+    }
+    else{
+        printf("Received signal number %d.\n", sig_num);
+    }
+}
+
+void receive_queue(){
+    struct sigaction act;
+
+    sigfillset(&act.sa_mask);
+    sigdelset(&act.sa_mask, SIGUSR1);
+    sigdelset(&act.sa_mask, SIGUSR2);
+
+    act.sa_sigaction = handler_queue;
+    act.sa_flags = SA_SIGINFO;
+
+    if(sigaction(SIGUSR1, &act, NULL) == -1){
+        printf("Could not set action for SIGUSR1.\n");
+        error();
+    }
+    if(sigaction(SIGUSR2, &act, NULL) == -1){
+        printf("Could not set action for SIGUSR2.\n");
+        error();
+    }
+
+    pause();
+}
+
 //=================MAIN====================//
 
 int main(int argc, char** argv){
@@ -94,6 +152,9 @@ int main(int argc, char** argv){
 
     if(strcmp(mode, "kill") == 0){
         receive_kill();
+    }
+    else if(strcmp(mode, "sigqueue") == 0){
+        receive_queue();   
     }
 
     return 0;
