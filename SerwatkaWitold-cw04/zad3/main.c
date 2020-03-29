@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 
 void division_handler(int sig, siginfo_t* info, void* context){
@@ -15,7 +16,7 @@ void division_handler(int sig, siginfo_t* info, void* context){
 }
 
 void segmentation_handler(int sig, siginfo_t* info, void* context){
-    printf("Segmentation fault exception occured on address %d\n", info->si_addr);
+    printf("Segmentation fault exception occured on address %p\n", info->si_addr);
     exit(1);
 }
 
@@ -34,13 +35,13 @@ int main(){
     seg_act.sa_sigaction = segmentation_handler;
     seg_act.sa_flags = SA_SIGINFO;
     sigemptyset(&seg_act.sa_mask);
-    sigaction(SIGFPE, &seg_act, NULL);
+    sigaction(SIGSEGV, &seg_act, NULL);
 
     struct sigaction child_act;
     child_act.sa_sigaction = child_handler;
     child_act.sa_flags = SA_SIGINFO;
     sigemptyset(&child_act.sa_mask);
-    sigaction(SIGFPE, &child_act, NULL);
+    sigaction(SIGCHLD, &child_act, NULL);
 
     pid_t pid = fork();
 
@@ -50,4 +51,10 @@ int main(){
     }
 
     wait(NULL);
+
+    char* seg = NULL;
+    seg[1] = 'w';
+    printf("Successfully avoided segmentation fault.\n");
+
+    return 0;
 }
