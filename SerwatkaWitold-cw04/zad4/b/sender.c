@@ -82,6 +82,7 @@ void handler_queue(int sig_num, siginfo_t* info, void* context){
         }
         else{
             printf("Catcher has received signal number %d\n", info->si_value.sival_int);
+            printf("Confirmation rececived.\n");
         }
     }
     else if(sig_num == SIGUSR2){
@@ -175,7 +176,10 @@ void send_kill(int pid, int count){
     act.sa_sigaction = handler_confirm;
     act.sa_flags = SA_SIGINFO;
 
-    sigaction(SIGUSR1, &act, NULL);
+    if(sigaction(SIGUSR1, &act, NULL) == -1){
+        printf("Could not install SIGUSR1 handler\n");
+        error();
+    }
 
     for(int i = 0; i < count; i++){
         kill(pid, SIGUSR1);
@@ -206,7 +210,7 @@ void send_queue(int pid, int count){
 
     for(int i = 0; i < count; i++){
         sigqueue(pid, SIGUSR1, u);
-        sleep(0.5);
+        sigsuspend(&act.sa_mask);
     }
 
     sigqueue(pid, SIGUSR2, u);
@@ -215,9 +219,22 @@ void send_queue(int pid, int count){
 }
 
 void send_sigrt(int pid, int count){
+    struct sigaction act;
+
+    sigfillset(&act.sa_mask);
+    sigdelset(&act.sa_mask, SIGUSR1);
+
+    act.sa_sigaction = handler_confirm;
+    act.sa_flags = SA_SIGINFO;
+
+    if(sigaction(SIGUSR1, &act, NULL) == -1){
+        printf("Could not install SIGUSR1 handler\n");
+        error();
+    }
+
     for(int i = 0; i < count; i++){
         kill(pid, SIGRTMIN);
-        sleep(1);
+        sigsuspend(&act.sa_mask);
     }
 
     kill(pid, SIGRTMAX);
