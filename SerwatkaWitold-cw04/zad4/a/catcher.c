@@ -179,11 +179,11 @@ void receive_sigrt(){
     act.sa_flags = SA_SIGINFO;
 
     if(sigaction(SIGRTMIN, &act, NULL) == -1){
-        printf("Could not set action for SIGUSR1.\n");
+        printf("Could not set action for SIGRTMIN.\n");
         error();
     }
     if(sigaction(SIGRTMAX, &act, NULL) == -1){
-        printf("Could not set action for SIGUSR2.\n");
+        printf("Could not set action for SIGRTMAX.\n");
         error();
     }
 
@@ -207,6 +207,12 @@ int main(int argc, char** argv){
     }
     else if(strcmp(mode, "sigqueue") == 0){
         receive_queue();   
+    }
+    else if(strcmp(mode, "sigrt") == 0){
+        receive_sigrt();
+    }
+    else{
+        error();
     }
 
     return 0;
