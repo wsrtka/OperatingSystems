@@ -158,12 +158,28 @@ void receive_sigrt(){
     pause();
 }
 
+void handler_confirm(int sig_num, siginfo_t* info, void* context){
+    if(sig_num == SIGUSR1){
+        printf("Received confirmation\n");
+    }
+}
+
 //=================SEND====================//
 
 void send_kill(int pid, int count){
+    struct sigaction act;
+
+    sigfillset(&act.sa_mask);
+    sigdelset(&act.sa_mask, SIGUSR1);
+
+    act.sa_sigaction = handler_confirm;
+    act.sa_flags = SA_SIGINFO;
+
+    sigaction(SIGUSR1, &act, NULL);
+
     for(int i = 0; i < count; i++){
         kill(pid, SIGUSR1);
-        sleep(0.5);
+        sigsuspend(&act.sa_mask);
     }
 
     kill(pid, SIGUSR2);

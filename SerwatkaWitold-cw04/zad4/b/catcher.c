@@ -63,6 +63,7 @@ void handler_kill(int sig_num, siginfo_t* info, void* context){
 
     if(sig_num == SIGUSR1){
         counter++;
+        kill(info->si_pid, SIGUSR1);
         sigset_t mask;
         sigfillset(&mask);
         sigdelset(&mask, SIGUSR1);
