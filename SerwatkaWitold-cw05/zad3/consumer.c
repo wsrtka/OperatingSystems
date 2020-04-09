@@ -31,11 +31,16 @@ int main(int argc, char** argv){
     char* buffer = calloc(n, sizeof(char));
     
     while(read(fd_pipe, &buffer, n) != 0){
+        //czytać samą treść pliku początkowego czy razem z pid producentów?
         if(write(fd_dest, &buffer, n) == 0){
             print("Unable to write to destination file.\n");
             exit(EXIT_FAILURE);
         }
     }
+
+    free(buffer);
+    close(fd_pipe);
+    close(fd_dest);
 
     return 0;
 }
