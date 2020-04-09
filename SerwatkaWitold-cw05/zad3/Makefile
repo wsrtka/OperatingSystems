@@ -13,5 +13,8 @@ consumer:
 main:
 	$(cc) main.c -o main
 
+source:
+	head -n 4 /dev/urandom | tr -dc A-Za-z0-9 | fold -w 10 > srcfile.txt
+
 clean:
-	rm -f main producer consumer
+	rm -f main producer consumer dest_file.txt src_file.txt
