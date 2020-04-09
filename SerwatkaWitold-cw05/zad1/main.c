@@ -13,29 +13,28 @@ int main(int argc, char** argv){
     }
 
     char* file_path = argv[1];
-    int fd = open(file_path, O_RDONLY);
-    if(fd == -1){
+    FILE* source_file = fopen(file_path, "r");
+    if(source_file == NULL){
         printf("Unable to open file.\n");
         exit(EXIT_FAILURE);
     }
 
-    lseek(fd, 0, SEEK_SET);
+    rewind(source_file);
 
-    int counter = 0;
-    char c = 'l';
-    char* buffer = calloc(0, sizeof(char));
-    while(read(fd, &c, 1) != 0){
-        if(c == '\n'){
-            lseek(fd, -counter, SEEK_CUR);
-            buffer = realloc(buffer, counter*sizeof(char));
-            read(fd, &buffer, counter);
+    char* line = NULL;
+    size_t len = 0;
+    ssize_t read = 0;
+    while((read = getline(&line, &len, source_file)) != -1){
+        
+            //nie chrzanić się z tym, lecimy ze standardową biblioteką żeby obrobić pliki
+            //czytamy jedną linijkę
+            //dzielimy ją po spacjach
+            //do nowej tablicy wrzucamy argumenty wywołania programu
+            //wywołujemy program pamiętając o pipe
 
-            counter = 0;
-        }
-        else{
-            counter++;
-        }
     }
+
+    free(line);
 
     return 0;
 }
