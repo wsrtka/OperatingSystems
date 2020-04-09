@@ -29,7 +29,42 @@ char** split_args(char* command){
 }
 
 void execute_line(char* line){
-    
+    int fork_count = 0;
+    int commands_count = 0;
+    int pipes[2][2];
+    char* commands[SIZE];
+    char* command = NULL;
+
+    command = strtok(line, "|");
+    while(command != NULL){
+        commands[commands_count++] = command;
+        command = strtok(NULL, "|");
+    }
+
+    for(int i = 0; i < commands_count; i++){
+        if(i != 0){
+            close(pipes[i % 2][0]);
+            close(pipes[i % 2][1]);
+        }
+        
+        if(pipe(pipes[i % 2]) == -1){
+            printf("Unable to create pipe on run %d.\n", i);
+            exit(EXIT_FAILURE);
+        }
+
+        pid_t pid = fork();
+
+        if(pid == 0){
+            //dziecko robi
+        }
+        else if(pid > 0){
+            //rodzic czeka
+        }
+        else{
+            printf("Fork error on run %d.\n", i);
+            exit(EXIT_FAILURE);
+        }
+    }
 }
 
 int main(int argc, char** argv){
