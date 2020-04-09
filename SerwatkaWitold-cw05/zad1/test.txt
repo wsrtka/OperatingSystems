@@ -1,0 +1,3 @@
+ps aux | wc -l
+ps aux | grep "grep"
+cat file.txt | grep "Hue" | wc -l

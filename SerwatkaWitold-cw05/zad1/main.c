@@ -69,7 +69,7 @@ void execute_line(char* line){
             if(i != commands_count - 1){
                 close(pipes[i % 2][0]);
 
-                if(dup2(STDOUT_FILENO, pipes[i % 2][1]) == -1){
+                if(dup2(pipes[i % 2][1], STDOUT_FILENO) == -1){
                     printf("Could not redirect stdout to pipe output on run %d.\n", i);
                     exit(EXIT_FAILURE);
                 }
@@ -77,15 +77,11 @@ void execute_line(char* line){
 
             execvp(args[0], args);
         }
-        else if(pid > 0){
-            //nothing?
-        }
-        else{
+        else if(pid < 0){
             printf("Fork error on run %d.\n", i);
             exit(EXIT_FAILURE);
         }
     }
-    wait(NULL);
 }
 
 int main(int argc, char** argv){
