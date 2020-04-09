@@ -8,6 +8,30 @@
 
 #define SIZE 128
 
+char** split_args(char* command){
+    int counter = 0;
+    char** args = NULL;
+    char delims[2] = {' ', '\n'};
+    char* word = NULL;
+
+    word = strtok(command, delims);
+
+    while(word != NULL){
+        args = realloc(args, ++counter*sizeof(char*));
+        args[counter - 1] = word;
+        word = strtok(NULL, delims);
+    }
+
+    args = realloc(args, (counter + 1)*sizeof(char*));
+    args[counter] = NULL;
+
+    return args;
+}
+
+void execute_line(char* line){
+    
+}
+
 int main(int argc, char** argv){
     if(argc != 2){
         printf("Wrong arguments count!\n Usage: ./main <file path>\n");
@@ -36,7 +60,7 @@ int main(int argc, char** argv){
         char delims[2] = {' ', '\n'};
         arg = strtok(line, delims);
 
-        while((arg != NULL){
+        while(arg != NULL){
             if(strcmp(arg, "|") == 0){
                 int fd[2];
                 pipe(fd);
@@ -52,6 +76,7 @@ int main(int argc, char** argv){
             }
             else{
                 args[counter++] = arg;
+
                 arg = strtok(NULL, delims);
             }
         }
