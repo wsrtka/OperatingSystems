@@ -108,9 +108,7 @@ int main(int argc, char** argv){
     ssize_t read = 0;
 
     while((read = getline(&line, &len, source_file)) != -1){
-
-
-
+        execute_line(line);
     }
 
     free(line);
