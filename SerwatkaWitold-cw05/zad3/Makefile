@@ -2,7 +2,7 @@ cc = gcc -Wall
 
 all: clean producer consumer main
 
-test:
+test: clean producer consumer
 
 producer:
 	$(cc) producer.c -o producer

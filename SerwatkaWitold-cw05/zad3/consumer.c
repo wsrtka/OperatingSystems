@@ -15,30 +15,30 @@ int main(int argc, char** argv){
 
     int fd_pipe = open(pipe, O_RDONLY);
     if(fd_pipe < 0){
-        print("Ubnable to open pipe.\n");
+        printf("Ubnable to open pipe.\n");
         exit(EXIT_FAILURE);
     }
 
-    int fd_dest = open(dest_filename, O_WRONLY);
+    int fd_dest = open(dest_filename, O_WRONLY | O_CREAT);
     if(fd_dest < 0){
-        print("Unable to open destination file.\n");
+        printf("Unable to open destination file.\n");
         exit(EXIT_FAILURE);
     }
 
     lseek(fd_pipe, 0, SEEK_SET);
     lseek(fd_dest, 0, SEEK_SET);
 
-    char* buffer = calloc(n, sizeof(char));
+    char buffer[n];
     
     while(read(fd_pipe, &buffer, n) != 0){
         //czytać samą treść pliku początkowego czy razem z pid producentów?
+        printf("%s\n", buffer);
         if(write(fd_dest, &buffer, n) == 0){
-            print("Unable to write to destination file.\n");
+            printf("Unable to write to destination file.\n");
             exit(EXIT_FAILURE);
         }
     }
 
-    free(buffer);
     close(fd_pipe);
     close(fd_dest);
 

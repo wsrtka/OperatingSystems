@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/file.h>
+#include <string.h>
 
 int main(int argc, char** argv){
     if(argc != 4){
@@ -14,43 +15,52 @@ int main(int argc, char** argv){
     char* src_filename = argv[2];
     int n = atoi(argv[3]);
 
-    int fd_pipe = open(pipe, O_RDONLY);
+    int fd_pipe = open(pipe, O_WRONLY);
     if(fd_pipe < 0){
-        print("Ubnable to open pipe.\n");
+        printf("Ubnable to open pipe.\n");
         exit(EXIT_FAILURE);
     }
 
-    int fd_src = open(src_filename, O_WRONLY);
+    int fd_src = open(src_filename, O_RDONLY);
     if(fd_src < 0){
-        print("Unable to open destination file.\n");
+        printf("Unable to open destination file.\n");
         exit(EXIT_FAILURE);
     }
 
     lseek(fd_pipe, 0, SEEK_SET);
     lseek(fd_src, 0, SEEK_SET);
 
-    char* buffer = calloc(n, sizeof(char));
-    char* prefix = calloc(8, sizeof(char)); //8 = # + 6 cyfr pid + #
+    printf("Tu?\n");
+
+    char buffer[n];
+    char* prefix = calloc(8, sizeof(char));
     sprintf(prefix, "#%d#", getpid());
-    char* to_write = calloc(8+n, sizeof(char));
+    char to_write[8+n];
+    int len;
     
-    while(read(fd_src, &buffer, n) != 0){
+    while((len = read(fd_src, &buffer, n)) != 0){
         strcpy(to_write, prefix);
+
+        if(len < n){
+            for(int i = len; i < n; i++){
+                buffer[i] = ' ';
+            }
+        }
+
         strcat(to_write, buffer);
 
         while(flock(fd_pipe, LOCK_EX) != 0){}
 
+        printf("%s\n", to_write);
+
         if(write(fd_pipe, &to_write, strlen(to_write)) == 0){
-            print("Unable to write to pipe.\n");
+            printf("Unable to write to pipe.\n");
             exit(EXIT_FAILURE);
         }
 
         flock(fd_pipe, LOCK_UN);
     }
 
-    free(buffer);
-    free(prefix);
-    free(to_write);
     close(fd_pipe);
     close(fd_src);
 
