@@ -6,6 +6,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#define SIZE 128
+
 int main(int argc, char** argv){
     if(argc != 2){
         printf("Wrong arguments count!\n Usage: ./main <file path>\n");
@@ -24,14 +26,25 @@ int main(int argc, char** argv){
     char* line = NULL;
     size_t len = 0;
     ssize_t read = 0;
-    while((read = getline(&line, &len, source_file)) != -1){
-        
-            //nie chrzanić się z tym, lecimy ze standardową biblioteką żeby obrobić pliki
-            //czytamy jedną linijkę
-            //dzielimy ją po spacjach
-            //do nowej tablicy wrzucamy argumenty wywołania programu
-            //wywołujemy program pamiętając o pipe
+    int counter = 0;
+    char* args[SIZE] = { NULL };
+    char* arg = NULL;
 
+    while((read = getline(&line, &len, source_file)) != -1){
+        while((arg = strtok(line, " ")) != NULL){
+            if(strcmp(arg, "|") == 0){
+                int fd[2];
+                pipe(fd);
+
+
+
+                counter = 0;
+                char* args[SIZE] = { NULL };
+            }
+            else{
+                args[counter++] = arg;
+            }
+        }
     }
 
     free(line);
