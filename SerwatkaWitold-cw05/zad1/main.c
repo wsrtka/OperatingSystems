@@ -27,22 +27,32 @@ int main(int argc, char** argv){
     size_t len = 0;
     ssize_t read = 0;
     int counter = 0;
+    int forks = 0;
     char* args[SIZE] = { NULL };
     char* arg = NULL;
 
     while((read = getline(&line, &len, source_file)) != -1){
-        while((arg = strtok(line, " ")) != NULL){
+
+        char delims[2] = {' ', '\n'};
+        arg = strtok(line, delims);
+
+        while((arg != NULL){
             if(strcmp(arg, "|") == 0){
                 int fd[2];
                 pipe(fd);
 
-
+                int pid = fork();
+                if(pid == 0){
+                    dup2(fd[0], STDIN_FILENO);
+                    dup2(STDOUT_FILENO, fd[1]);
+                }
 
                 counter = 0;
                 char* args[SIZE] = { NULL };
             }
             else{
                 args[counter++] = arg;
+                arg = strtok(NULL, delims);
             }
         }
     }
