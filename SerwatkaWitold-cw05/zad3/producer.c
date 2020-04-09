@@ -23,7 +23,7 @@ int main(int argc, char** argv){
 
     int fd_src = open(src_filename, O_RDONLY);
     if(fd_src < 0){
-        printf("Unable to open destination file.\n");
+        printf("Unable to open source file.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -37,6 +37,8 @@ int main(int argc, char** argv){
     int len;
     
     while((len = read(fd_src, &buffer, n)) != 0){
+        sleep(1);
+
         strcpy(to_write, prefix);
 
         if(len < n){
