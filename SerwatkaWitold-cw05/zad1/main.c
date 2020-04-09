@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 
 #define SIZE 128
 
@@ -29,7 +30,6 @@ char** split_args(char* command){
 }
 
 void execute_line(char* line){
-    int fork_count = 0;
     int commands_count = 0;
     int pipes[2][2];
     char* commands[SIZE];
@@ -55,16 +55,37 @@ void execute_line(char* line){
         pid_t pid = fork();
 
         if(pid == 0){
-            //dziecko robi
+            char** args = split_args(commands[i]);
+
+            if(i != 0){
+                close(pipes[(i+1)%2][1]);
+
+                if(dup2(pipes[(i+1)%2][0], STDIN_FILENO) == -1){
+                    printf("Could not redirect pipe input to stdin on run %d.\n", i);
+                    exit(EXIT_FAILURE);
+                }
+            }
+
+            if(i != commands_count - 1){
+                close(pipes[i % 2][0]);
+
+                if(dup2(STDOUT_FILENO, pipes[i % 2][1]) == -1){
+                    printf("Could not redirect stdout to pipe output on run %d.\n", i);
+                    exit(EXIT_FAILURE);
+                }
+            }
+
+            execvp(args[0], args);
         }
         else if(pid > 0){
-            //rodzic czeka
+            //nothing?
         }
         else{
             printf("Fork error on run %d.\n", i);
             exit(EXIT_FAILURE);
         }
     }
+    wait(NULL);
 }
 
 int main(int argc, char** argv){
@@ -85,36 +106,11 @@ int main(int argc, char** argv){
     char* line = NULL;
     size_t len = 0;
     ssize_t read = 0;
-    int counter = 0;
-    int forks = 0;
-    char* args[SIZE] = { NULL };
-    char* arg = NULL;
 
     while((read = getline(&line, &len, source_file)) != -1){
 
-        char delims[2] = {' ', '\n'};
-        arg = strtok(line, delims);
 
-        while(arg != NULL){
-            if(strcmp(arg, "|") == 0){
-                int fd[2];
-                pipe(fd);
 
-                int pid = fork();
-                if(pid == 0){
-                    dup2(fd[0], STDIN_FILENO);
-                    dup2(STDOUT_FILENO, fd[1]);
-                }
-
-                counter = 0;
-                char* args[SIZE] = { NULL };
-            }
-            else{
-                args[counter++] = arg;
-
-                arg = strtok(NULL, delims);
-            }
-        }
     }
 
     free(line);
