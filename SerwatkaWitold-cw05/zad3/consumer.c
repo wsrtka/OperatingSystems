@@ -33,11 +33,13 @@ int main(int argc, char** argv){
     while(read(fd_pipe, &buffer, n) != 0){
         //czytać samą treść pliku początkowego czy razem z pid producentów?
         printf("%s\n", buffer);
-        if(write(fd_dest, &buffer, n) == 0){
+        if(write(fd_dest, &buffer, strlen(buffer)) == 0){
             printf("Unable to write to destination file.\n");
             exit(EXIT_FAILURE);
         }
     }
+
+    printf("Done\n");
 
     close(fd_pipe);
     close(fd_dest);

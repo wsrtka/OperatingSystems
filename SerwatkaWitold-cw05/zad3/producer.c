@@ -30,8 +30,6 @@ int main(int argc, char** argv){
     lseek(fd_pipe, 0, SEEK_SET);
     lseek(fd_src, 0, SEEK_SET);
 
-    printf("Tu?\n");
-
     char buffer[n];
     char* prefix = calloc(8, sizeof(char));
     sprintf(prefix, "#%d#", getpid());
@@ -50,8 +48,6 @@ int main(int argc, char** argv){
         strcat(to_write, buffer);
 
         while(flock(fd_pipe, LOCK_EX) != 0){}
-
-        printf("%s\n", to_write);
 
         if(write(fd_pipe, &to_write, strlen(to_write)) == 0){
             printf("Unable to write to pipe.\n");
