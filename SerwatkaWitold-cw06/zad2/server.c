@@ -71,10 +71,9 @@ void initialize(){
 
     printf("Signal handler set.\n");
 
-    int pid = getpid();
-    sprintf(queue_name, "%d", pid);
+    sprintf(queue_name, "/%s", PROJECT);
 
-    if((server_queue = mq_open(queue_name, O_RDWR | O_CREAT)) != -1){
+    if((server_queue = mq_open(queue_name, O_RDWR | O_CREAT)) == -1){
         error("Could not create server queue.\n");
     }
     printf("Server queue created.\n");
@@ -110,6 +109,8 @@ void list_clients(char* msg){
             mq_send(client_qids[id], res, strlen(res), LIST);
         }
     }
+
+    mq_send(client_qids[id], "end", 10, LIST);
 }
 
 void connect_clients(char* msg){

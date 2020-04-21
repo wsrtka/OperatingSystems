@@ -15,13 +15,6 @@
 #define CONNECT 0
 #define PROJECT 'b'
 
-struct msgbuf
-{
-    long mtype;
-    char mtext[MSG_SIZE];
-    key_t obj_key;
-    int obj_id;
-};
 
 
 void error(char* msg){

@@ -1,3 +1,6 @@
+#define _POSIX_C_SOURCE 199309
+#define _GNU_SOURCE
+
 #include "header.h"
 #include <sys/msg.h>
 #include <sys/ipc.h>
@@ -11,21 +14,31 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-int client_id;
+int client_id, active = 0;
+char* queue_name;
 mqd_t client_queue, server_queue, connected = -1;
 
 void sigint_handler(){
-    struct msgbuf stop_req;
-    stop_req.mtype = STOP;
-    stop_req.obj_id = client_id;
+    char* msg;
+    sprintf(msg, "%d", client_id);
 
-    if(msgsnd(server_queue, &stop_req, MSG_SIZE, 0) == -1){
+    if(mq_send(server_queue, msg, strlen(msg), STOP) == -1){
         printf("Failed to send stop request.\n");
         return;
     }
     printf("Stop request sent to server.\n");
 
-    msgctl(client_queue, IPC_RMID, NULL);
+    if(mq_close(client_queue) == -1){
+        printf("Failed to close client queue %d.\n", server_queue);
+    }
+
+    if(mq_close(client_queue) == -1){
+        printf("Failed to close server queue %d.\n", server_queue);
+    }
+
+    if(mq_unlink(queue_name) == -1){
+        printf("Failed to remove queue with name %s.\n", queue_name);
+    }
 }
 
 void initialize(){
@@ -34,164 +47,130 @@ void initialize(){
     signal(SIGINT, sigint_handler);
     printf("Signal handlers set.\n");
 
-    char* file_path;
-    if((file_path = getenv("HOME")) == NULL){
-        error("Error getting file path.\n");
-    }
-    printf("File path aquired.\n");
+    char* server_queue_name;
+    sprintf(server_queue_name, "/%s", (char)PROJECT);
+    server_queue = mq_open(server_queue_name, O_RDWR);
 
-    key_t server_key;
-    if((server_key = ftok(file_path, PROJECT)) == -1){
-        error("Could not obtain server key.\n");
+    int pid = getpid();
+    sprintf(queue_name, "/%d", pid);
+    if((client_queue = mq_open(queue_name, O_RDWR | O_CREAT)) == -1){
+        error("Could not create client queue.\n");
     }
-    printf("Server key obtained.\n");
 
-    if((server_queue = msgget(server_key, 0)) == -1){
-        error("Could not connect to server queue.\n");
+    if(mq_send(server_queue, queue_name, strlen(queue_name), INIT) == -1){
+        error("Failed to send queue name to server.\n");
     }
-    printf("Connected to server queue.\n");
+    printf("Queue name sent to server.\n");
 
-    key_t object_key;
-    if((object_key = ftok(file_path, (char)getpid())) == -1){
-        error("Could not get client key.\n");
-    }
-    printf("Obtained client key.\n");
+    int prio;
 
-    if((client_queue = msgget(object_key, IPC_CREAT | 0666)) == -1){
-        error("Could not get client queue.\n");
-    }
-    printf("Client queue set.\n%d\n", client_queue);
-
-    struct msgbuf init_msg;
-    init_msg.mtype = INIT;
-    init_msg.obj_key = object_key;
-    init_msg.obj_id = client_queue;
-    if(msgsnd(server_queue, &init_msg, MSG_SIZE, 0) == -1){
-        error("Failed to send object key to server.\n");
-    }
-    printf("Object key sent to server.\n");
-
-    if(msgrcv(client_queue, &init_msg, MSG_SIZE, INIT, 0) == -1){
+    if(mq_receive(client_queue, server_queue_name, MSG_SIZE, &prio) == -1){
         error("Could not get client id.\n");
     }
-    client_id = init_msg.obj_id;
-    printf("Client id revceived.\n");
+    printf("Client id received.\n");
 
     printf("Client initialized.\n");
 }
 
 void list(){
-    struct msgbuf list_req;
-    list_req.mtype = LIST;
-    list_req.obj_id = client_id;
-
-    if(msgsnd(server_queue, &list_req, MSG_SIZE, 0) == -1){
+    char* msg;
+    sprintf(msg, "%d", client_id);
+    if(mq_send(server_queue, msg, strlen(msg), LIST) == -1){
         error("Failed to send list request to server.\n");
     }
 
+    int priority;
     printf("Clients available: \n");
-    while(msgrcv(client_queue, &list_req, MSG_SIZE, LIST, 0) > 0){
-        printf("%d\n", list_req.obj_id);
-    }
+    do{
+        mq_receive(client_queue, msg, MSG_SIZE, &priority);
+        if(priority == LIST){
+            printf("\t%s\n", msg);
+        }
+
+    }while(strcmp(msg, "end") != 0);
 }
 
-void disconnect(int key){
-    struct msgbuf disconnect_req;
-    disconnect_req.mtype = DISCONNECT;
-    disconnect_req.obj_key = key;
-    disconnect_req.obj_id = client_id;
-
-    if(msgsnd(server_queue, &disconnect_req, MSG_SIZE, 0) == -1 || msgsnd(connected, &disconnect_req, MSG_SIZE, 0) == -1){
+void disconnect(){
+    if(mq_send(server_queue, "end", 10, DISCONNECT) == -1 || mq_send(connected, "end", 10, DISCONNECT) == -1){
         error("Failed to send disconnect request.\n");
     }
 
+    active = 0;
     connected = -1;
 }
 
-void chat(key_t key){
-    if((connected = msgget(key, 0)) == -1){
-        printf("Could not initialize chat.\n");
-        return;
+void receive_msg(){
+    char* text;
+    int prio;
+
+    mq_receive(client_queue, text, MSG_SIZE, &prio);
+    if(prio == STOP){
+        raise(SIGINT);
+    }
+    if(prio == DISCONNECT){
+        disconnect();
+    }
+    if(prio == CONNECT){
+        printf("%s\n", text);
     }
 
-    pid_t chat = fork();
+    struct sigevent rec;
+    rec.sigev_notify = SIGEV_THREAD;
+    rec.sigev_notify_function = receive_msg;
+    mq_notify(client_queue, &rec);
+}
 
-    if(chat == 0){
-        struct msgbuf chat_read;
+void chat(char* id){
+    connected = atoi(id);
+    char* text;
 
-        while(1){
-            msgrcv(connected, &chat_read, MSG_SIZE, 0, 0);
-            if(chat_read.mtype == CONNECT){
-                printf("%s\n", chat_read.mtext);
-            }
+    struct sigevent rec;
+    rec.sigev_notify = SIGEV_THREAD;
+    rec.sigev_notify_function = receive_msg;
+    mq_notify(client_queue, &rec);
 
-            if(chat_read.mtype == DISCONNECT){
-                printf("Your partner disconnected.\n");
-                exit(EXIT_SUCCESS);
-            }
-        }
-    }
-    else if(chat > 0){
-        struct msgbuf chat_send;
-        chat_send.mtype = CONNECT;
-        char text[MSG_SIZE];
+    while(active){
+        scanf("%s", text);
 
-        while(1){
+        if(strcmp(text, "/disconnect") == 0){
+            printf("Are you sure? [y/n]\n");
             scanf("%s", text);
 
-            if(kill(0, chat) == -1){
-                disconnect(key);
+            if(strcmp(text, "y") == 0){
+                disconnect();
                 break;
             }
-
-            if(strcmp(text, "/disconnect") == 0){
-                printf("Are you sure? [y/n]\n");
-                scanf("%s", text);
-
-                if(strcmp(text, "y") == 0){
-                    disconnect(key);
-                    break;
-                }
-            }
-            else{
-                strcpy(chat_send.mtext, text);
-                
-                if(msgsnd(connected, &chat_send, MSG_SIZE, 0) == -1){
-                    printf("Failed to send message.\n");
-                }
+        }
+        else{
+            if(mq_send(connected, text, strlen(text), CONNECT) == -1){
+                printf("Failed to send message.\n");
             }
         }
-    }
-    else{
-        printf("Could not initialize chat.\n");
-        return;
     }
 }
 
 void connect_with(char* id){
-    struct msgbuf connect_req;
+    char* msg;
+    sprintf(msg, "%d %s", client_id, id);
 
-    connect_req.mtype = CONNECT;
-    strcpy(connect_req.mtext, id);
-    connect_req.obj_id = client_id;
-
-    if(msgsnd(server_queue, &connect_req, MSG_SIZE, 0) == -1){
+    if(mq_send(server_queue, msg, strlen(msg), CONNECT) == -1){
         printf("Failed to connect with client %s.\n", id);
         return;
     }
     printf("Connection request sent.\n");
 
-    if(msgrcv(client_queue, &connect_req, MSG_SIZE, CONNECT, 0) == -1){
+    int prio;
+    if(mq_receive(client_queue, msg, MSG_SIZE, &prio) == -1){
         printf("Failed to receive connection key.\n");
         return;
     }
-    if(connect_req.obj_key == -1){
+    if(strcmp(msg, "failed") == 0){
         printf("Client is not available for connection.\n");
         return;
     }
     printf("Connection key received.\n");
 
-    chat(connect_req.obj_key);
+    chat(msg);
 }
 
 void handle_command(char* str){
@@ -219,26 +198,10 @@ int main(){
 
     char command[32];
 
-    pid_t pid = fork();
-
-    if(pid == 0){
-        struct msgbuf stop;
-        msgrcv(server_queue, &stop, MSG_SIZE, STOP, 0);
-        exit(EXIT_SUCCESS);
-    }
-    else if(pid >0){
-        while(1){
-            printf("> ");
-            scanf("%s", command);
-            handle_command(command);
-            if(kill(0, pid) == -1){
-                raise(SIGINT);
-                break;
-            }
-        }
-    }
-    else{
-        error("Error on client startup.\n");
+    while(1){
+        printf("> ");
+        scanf("%s", command);
+        handle_command(command);
     }
 
     return 0;
