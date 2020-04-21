@@ -7,6 +7,7 @@
 int queue_id, size = 0;
 int client_qids[MAXCLIENTS];
 key_t client_keys[MAXCLIENTS];
+int client_available[MAXCLIENTS];
 
 int find_new_place(){
     for(int i = size; i < size + MAXCLIENTS; i++){
@@ -69,7 +70,7 @@ void handle_msg(struct msgbuf msg){
         break;
 
     case LIST:             
-
+        list_clients(msg.obj_id);
         break;
 
     case CONNECT:             
@@ -92,12 +93,25 @@ void init_client(int object_key){
     }
 
     client_keys[id] = object_key;
+    client_available[id] = 1;
     struct msgbuf msg;
     msg.obj_id = id;
     msg.mtype = INIT;
 
     if(msgsnd(client_qids[id], &msg, MSG_SIZE, 0) == -1){
         error("Could not send respond to client.\n");
+    }
+}
+
+void list_clients(int client_id){
+    struct msgbuf list_res;
+    list_res.mtype = LIST;
+
+    for(int i = 0; i < MAXCLIENTS; i++){
+        if(client_qids != -1 && client_available){
+            list_res.obj_id = i;
+            msgsnd(client_qids[client_id], &list_res, MSG_SIZE, 0);
+        }
     }
 }
 

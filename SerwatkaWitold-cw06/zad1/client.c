@@ -66,7 +66,7 @@ void handle_command(char* str){
     str = strtok(str, " ");
 
     if(strcmp(str, "list") == 0){
-
+        list();
     }
     else if(strcmp(str, "connect") == 0){
 
@@ -80,6 +80,21 @@ void handle_command(char* str){
     else{
         printf("Could not understand command. Try using one of these:\n");
         printf("\tlist\n\tconnect [client_id]\n\tdisconnect\n\tstop\n");
+    }
+}
+
+void list(){
+    struct msgbuf list_req;
+    list_req.mtype = LIST;
+    list_req.obj_id = client_id;
+
+    if(msgsnd(server_queue, &list_req, MSG_SIZE, 0) == -1){
+        error("Failed to send list request to server.\n");
+    }
+
+    printf("Clients available: \n");
+    while(msgrcv(client_queue, &list_req, MSG_SIZE, LIST, 0) > 0){
+        printf("%d\n", list_req.obj_id);
     }
 }
 
