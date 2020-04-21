@@ -5,12 +5,12 @@
 
 #define MSG_SIZE 256
 #define PATHLENGTH 128
-#define MAXCLIENTS 32
+#define MAXCLIENTS 10
 #define STOP  0
 #define DISCONNECT 1
-#define LIST 2
-#define CONNECT 3
-#define INIT 4
+#define INIT 2
+#define LIST 3
+#define CONNECT 4
 #define PROJECT 'c'
 
 struct msgbuf
