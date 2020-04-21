@@ -19,6 +19,16 @@ int find_new_place(){
     return -1;
 }
 
+int find_id_by_key(key_t key){
+    for(int i = 0; i < MAXCLIENTS; i++){
+        if(client_keys[i] == key){
+            return i;
+        }
+    }
+
+    return -1;
+}
+
 void sigint_handler(){
 
 }
@@ -62,7 +72,7 @@ void handle_msg(struct msgbuf msg){
         break;
     
     case DISCONNECT:             
-
+        disconnect_client(msg.obj_id);
         break;
 
     case INIT:             
@@ -74,7 +84,7 @@ void handle_msg(struct msgbuf msg){
         break;
 
     case CONNECT:             
-        
+        connect_clients(msg.obj_id, atoi(msg.mtext));
         break;
 
     default:
@@ -113,6 +123,36 @@ void list_clients(int client_id){
             msgsnd(client_qids[client_id], &list_res, MSG_SIZE, 0);
         }
     }
+}
+
+void connect_clients(int client_src, int client_dest){
+    struct msgbuf connect_res;
+    connect_res.mtype = CONNECT;
+    connect_res.obj_key = -1;
+
+    if(client_available[client_src] == 0 || client_available[client_dest] == 0){
+        msgsnd(client_qids[client_src], &connect_res, MSG_SIZE, 0);
+        return;
+    }
+
+    connect_res.obj_key = client_keys[client_dest];
+    if(msgsnd(client_qids[client_src], &connect_res, MSG_SIZE, 0) == -1){
+        printf("Could not connect client.\n");
+        return;
+    }
+
+    connect_res.obj_key = client_keys[client_src];
+    if(msgsnd(client_qids[client_dest], &connect_res, MSG_SIZE, 0) == -1){
+        printf("Could not connect client.\n");
+        return;
+    }
+
+    client_available[client_dest] = 0;
+    client_available[client_src] = 0;
+}
+
+void disconnect_client(int client_id){
+    client_available[client_id] = 1;
 }
 
 int main(){

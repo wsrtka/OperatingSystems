@@ -75,9 +75,6 @@ void handle_command(char* str){
         int connect_id = strtok(NULL, " ");
         connect_with(connect_id);
     }
-    else if(strcmp(str, "disconnect") == 0){
-
-    }
     else if(strcmp(str, "stop") == 0){
 
     }
@@ -119,6 +116,10 @@ void connect_with(char* id){
         printf("Failed to receive connection key.\n");
         return;
     }
+    if(connect_req.obj_key == -1){
+        printf("Client is not available for connection.\n");
+        return;
+    }
     printf("Connection key received.\n");
 
     chat(connect_req.obj_key);
@@ -141,6 +142,7 @@ void chat(key_t key){
             if(chat_read.mtype == CONNECT){
                 printf("%s\n", chat_read.mtext);
             }
+
             if(chat_read.mtype == DISCONNECT){
                 printf("Your partner disconnected.\n");
                 exit(EXIT_SUCCESS);
@@ -188,8 +190,9 @@ void disconnect(int key){
     struct msgbuf disconnect_req;
     disconnect_req.mtype = DISCONNECT;
     disconnect_req.obj_key = key;
+    disconnect_req.obj_id = client_id;
 
-    if(msgsnd(server_queue, &disconnect_req, MSG_SIZE, 0) == -1){
+    if(msgsnd(server_queue, &disconnect_req, MSG_SIZE, 0) == -1 || msgsnd(connected, &disconnect_req, MSG_SIZE, 0) == -1){
         error("Failed to send disconnect request.\n");
     }
 
