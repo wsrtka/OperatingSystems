@@ -11,13 +11,26 @@
 int server_queue, client_queue, client_id, connected = -1;
 
 void sigint_handler(){
+    struct msgbuf stop_req;
+    stop_req.mtype = DISCONNECT;
+    stop_req.obj_id = client_id;
 
+    if(msgsnd(server_queue, &stop_req, MSG_SIZE, 0) == -1){
+        printf("Failed to send stop request.\n");
+        return;
+    }
+    printf("Stop request sent to server.\n");
+
+    msgctl(client_queue, IPC_RMID, NULL);
 }
 
 void initialize(){
     printf("Initializing client...\n");
 
     signal(SIGINT, sigint_handler);
+    // if(atexit(sigint_handler) == -1){
+    //     error("Failed to set exit function.\n");
+    // }
     printf("Signal handlers set.\n");
 
     char* file_path;
@@ -76,7 +89,8 @@ void handle_command(char* str){
         connect_with(connect_id);
     }
     else if(strcmp(str, "stop") == 0){
-
+        raise(SIGINT);
+        exit(EXIT_SUCCESS);
     }
     else{
         printf("Could not understand command. Try using one of these:\n");
