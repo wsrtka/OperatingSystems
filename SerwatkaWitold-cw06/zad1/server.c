@@ -30,7 +30,35 @@ int find_id_by_key(key_t key){
 }
 
 void sigint_handler(){
+    struct msgbuf stop;
+    stop.mtype = STOP;
 
+    pid_t pid = fork();
+
+    if(pid == 0){
+        for(int i = 0; i < MAXCLIENTS; i++){
+            if(client_qids[i] != -1){
+                msgsnd(client_qids[i], &stop, MSG_SIZE, 0);
+                printf("Sent STOP to client number %d\n", i);
+            }
+        }
+
+        exit(EXIT_SUCCESS);
+    }
+    else if(pid > 0){
+        struct msgbuf receive;
+
+        while(size > 0){
+            msgrcv(queue_id, &receive, MSG_SIZE, STOP, 0);
+            client_qids[receive.obj_id] = -1;
+            size--;
+        }
+    }
+    else{
+        error("Error while shutting down server.\n");
+    }
+
+    msgctl(queue_id, IPC_RMID, NULL);
 }
 
 void initialize(){
@@ -52,7 +80,7 @@ void initialize(){
     }
     printf("Object key aquired.\n");
 
-    if((queue_id = msgget(obj_key, IPC_CREAT)) == -1){
+    if((queue_id = msgget(obj_key, IPC_CREAT | IPC_EXCL | 0666)) == -1){
         error("Error encountered in queue creation.\n");
     }
     printf("Initialized new message queue with id %d\n", queue_id);
@@ -131,7 +159,8 @@ void handle_msg(struct msgbuf msg){
     switch (msg.mtype)
     {
     case STOP:             
-        /* code */
+        raise(SIGINT);
+        exit(EXIT_SUCCESS);
         break;
     
     case DISCONNECT:             

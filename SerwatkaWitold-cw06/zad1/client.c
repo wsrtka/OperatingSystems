@@ -12,7 +12,7 @@ int server_queue, client_queue, client_id, connected = -1;
 
 void sigint_handler(){
     struct msgbuf stop_req;
-    stop_req.mtype = DISCONNECT;
+    stop_req.mtype = STOP;
     stop_req.obj_id = client_id;
 
     if(msgsnd(server_queue, &stop_req, MSG_SIZE, 0) == -1){
@@ -217,10 +217,26 @@ int main(){
 
     char command[32];
 
-    while(1){
-        printf("> ");
-        scanf("%s", command);
-        handle_command(command);
+    pid_t pid = fork();
+
+    if(pid == 0){
+        struct msgbuf stop;
+        msgrcv(server_queue, &stop, MSG_SIZE, STOP, 0);
+        exit(EXIT_SUCCESS);
+    }
+    else if(pid >0){
+        while(1){
+            printf("> ");
+            scanf("%s", command);
+            handle_command(command);
+            if(kill(0, pid) == -1){
+                raise(SIGINT);
+                break;
+            }
+        }
+    }
+    else{
+        error("Error on client startup.\n");
     }
 
     return 0;

@@ -13,7 +13,7 @@
 #define INIT 2
 #define LIST 3
 #define CONNECT 4
-#define PROJECT 'c'
+#define PROJECT 'a'
 
 struct msgbuf
 {
