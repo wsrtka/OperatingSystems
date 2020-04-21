@@ -4,9 +4,15 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <signal.h>
+#include <string.h>
 
-int server_queue, client_queue;
+int server_queue, client_queue, client_id;
+
+void sigint_handler(){
+
+}
 
 void initialize(){
     printf("Initializing client...\n");
@@ -42,16 +48,51 @@ void initialize(){
     }
     printf("Object key sent to server.\n");
 
-    if((client_queue = msget(object_key, IPC_CREAT)) == -1){
-        error("Could not create client queue.\n");
+    if((client_queue = msgget(object_key, 0)) == -1){
+        error("Could not get client queue.\n");
     }
-    printf("Client queue created.\n");
+    printf("Client queue set.\n");
+
+    if(msgrcv(client_queue, &init_msg, MSG_SIZE, INIT, 0) == -1){
+        error("Could not get client id.\n");
+    }
+    client_id = init_msg.obj_id;
+    printf("Client id revceived.\n");
 
     printf("Client initialized.\n");
 }
 
+void handle_command(char* str){
+    str = strtok(str, " ");
+
+    if(strcmp(str, "list") == 0){
+
+    }
+    else if(strcmp(str, "connect") == 0){
+
+    }
+    else if(strcmp(str, "disconnect") == 0){
+
+    }
+    else if(strcmp(str, "stop") == 0){
+
+    }
+    else{
+        printf("Could not understand command. Try using one of these:\n");
+        printf("\tlist\n\tconnect [client_id]\n\tdisconnect\n\tstop\n");
+    }
+}
+
 int main(){
     initialize();
+
+    char command[32];
+
+    while(1){
+        printf("> ");
+        scanf("%s", command);
+        handle_command(command);
+    }
 
     return 0;
 }

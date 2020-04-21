@@ -8,6 +8,16 @@ int queue_id, size = 0;
 int client_qids[MAXCLIENTS];
 key_t client_keys[MAXCLIENTS];
 
+int find_new_place(){
+    for(int i = size; i < size + MAXCLIENTS; i++){
+        if(client_qids[i % MAXCLIENTS] == -1){
+            return i;
+        }
+    }
+
+    return -1;
+}
+
 void sigint_handler(){
 
 }
@@ -76,7 +86,19 @@ void init_client(int object_key){
         return;
     }
 
-    
+    int id = find_new_place();
+    if((client_qids[id] = msgget(object_key, IPC_CREAT)) == -1){
+        return;
+    }
+
+    client_keys[id] = object_key;
+    struct msgbuf msg;
+    msg.obj_id = id;
+    msg.mtype = INIT;
+
+    if(msgsnd(client_qids[id], &msg, MSG_SIZE, 0) == -1){
+        error("Could not send respond to client.\n");
+    }
 }
 
 int main(){
