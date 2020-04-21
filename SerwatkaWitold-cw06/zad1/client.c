@@ -34,7 +34,7 @@ void initialize(){
     printf("Signal handlers set.\n");
 
     char* file_path;
-    if((file_path = getenv("HOME")) == -1){
+    if((file_path = getenv("HOME")) == NULL){
         error("Error getting file path.\n");
     }
     printf("File path aquired.\n");
@@ -78,26 +78,6 @@ void initialize(){
     printf("Client initialized.\n");
 }
 
-void handle_command(char* str){
-    str = strtok(str, " ");
-
-    if(strcmp(str, "list") == 0){
-        list();
-    }
-    else if(strcmp(str, "connect") == 0){
-        int connect_id = strtok(NULL, " ");
-        connect_with(connect_id);
-    }
-    else if(strcmp(str, "stop") == 0){
-        raise(SIGINT);
-        exit(EXIT_SUCCESS);
-    }
-    else{
-        printf("Could not understand command. Try using one of these:\n");
-        printf("\tlist\n\tconnect [client_id]\n\tdisconnect\n\tstop\n");
-    }
-}
-
 void list(){
     struct msgbuf list_req;
     list_req.mtype = LIST;
@@ -113,30 +93,17 @@ void list(){
     }
 }
 
-void connect_with(char* id){
-    struct msgbuf connect_req;
+void disconnect(int key){
+    struct msgbuf disconnect_req;
+    disconnect_req.mtype = DISCONNECT;
+    disconnect_req.obj_key = key;
+    disconnect_req.obj_id = client_id;
 
-    connect_req.mtype = CONNECT;
-    strcpy(connect_req.mtext, id);
-    connect_req.obj_id = client_id;
-
-    if(msgsnd(server_queue, &connect_req, MSG_SIZE, 0) == -1){
-        printf("Failed to connect with client %s.\n", id);
-        return;
+    if(msgsnd(server_queue, &disconnect_req, MSG_SIZE, 0) == -1 || msgsnd(connected, &disconnect_req, MSG_SIZE, 0) == -1){
+        error("Failed to send disconnect request.\n");
     }
-    printf("Connection request sent.\n");
 
-    if(msgrcv(client_queue, &connect_req, MSG_SIZE, CONNECT, 0) == -1){
-        printf("Failed to receive connection key.\n");
-        return;
-    }
-    if(connect_req.obj_key == -1){
-        printf("Client is not available for connection.\n");
-        return;
-    }
-    printf("Connection key received.\n");
-
-    chat(connect_req.obj_key);
+    connected = -1;
 }
 
 void chat(key_t key){
@@ -146,7 +113,6 @@ void chat(key_t key){
     }
 
     pid_t chat = fork();
-    pid_t parent_pid = getpid();
 
     if(chat == 0){
         struct msgbuf chat_read;
@@ -200,17 +166,50 @@ void chat(key_t key){
     }
 }
 
-void disconnect(int key){
-    struct msgbuf disconnect_req;
-    disconnect_req.mtype = DISCONNECT;
-    disconnect_req.obj_key = key;
-    disconnect_req.obj_id = client_id;
+void connect_with(char* id){
+    struct msgbuf connect_req;
 
-    if(msgsnd(server_queue, &disconnect_req, MSG_SIZE, 0) == -1 || msgsnd(connected, &disconnect_req, MSG_SIZE, 0) == -1){
-        error("Failed to send disconnect request.\n");
+    connect_req.mtype = CONNECT;
+    strcpy(connect_req.mtext, id);
+    connect_req.obj_id = client_id;
+
+    if(msgsnd(server_queue, &connect_req, MSG_SIZE, 0) == -1){
+        printf("Failed to connect with client %s.\n", id);
+        return;
     }
+    printf("Connection request sent.\n");
 
-    connected = -1;
+    if(msgrcv(client_queue, &connect_req, MSG_SIZE, CONNECT, 0) == -1){
+        printf("Failed to receive connection key.\n");
+        return;
+    }
+    if(connect_req.obj_key == -1){
+        printf("Client is not available for connection.\n");
+        return;
+    }
+    printf("Connection key received.\n");
+
+    chat(connect_req.obj_key);
+}
+
+void handle_command(char* str){
+    str = strtok(str, " ");
+
+    if(strcmp(str, "list") == 0){
+        list();
+    }
+    else if(strcmp(str, "connect") == 0){
+        char* connect_id = strtok(NULL, " ");
+        connect_with(connect_id);
+    }
+    else if(strcmp(str, "stop") == 0){
+        raise(SIGINT);
+        exit(EXIT_SUCCESS);
+    }
+    else{
+        printf("Could not understand command. Try using one of these:\n");
+        printf("\tlist\n\tconnect [client_id]\n\tdisconnect\n\tstop\n");
+    }
 }
 
 int main(){

@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <signal.h>
+#include <stdio.h>
 
 #define MSG_SIZE 256
 #define PATHLENGTH 128
@@ -24,7 +25,7 @@ struct msgbuf
 
 
 void error(char* msg){
-    printf(msg);
+    printf("%s", msg);
     raise(SIGINT);
     exit(EXIT_FAILURE);
 }

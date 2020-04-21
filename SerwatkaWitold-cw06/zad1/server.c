@@ -41,7 +41,7 @@ void initialize(){
     printf("Signal handler set.\n");
 
     char* file_path;   
-    if((file_path = getenv("HOME")) == -1){
+    if((file_path = getenv("HOME")) == NULL){
         error("Error getting file path.\n");
     }
     printf("File path aquired.\n"); 
@@ -62,34 +62,6 @@ void initialize(){
     }
 
     printf("Server initialized.\n");
-}
-
-void handle_msg(struct msgbuf msg){
-    switch (msg.mtype)
-    {
-    case STOP:             
-        /* code */
-        break;
-    
-    case DISCONNECT:             
-        disconnect_client(msg.obj_id);
-        break;
-
-    case INIT:             
-        init_client(msg.obj_key);
-        break;
-
-    case LIST:             
-        list_clients(msg.obj_id);
-        break;
-
-    case CONNECT:             
-        connect_clients(msg.obj_id, atoi(msg.mtext));
-        break;
-
-    default:
-        error("Invalid msg type.\n");
-    }
 }
 
 void init_client(int object_key){
@@ -118,7 +90,7 @@ void list_clients(int client_id){
     list_res.mtype = LIST;
 
     for(int i = 0; i < MAXCLIENTS; i++){
-        if(client_qids != -1 && client_available){
+        if(client_qids[i] != -1 && client_available[i]){
             list_res.obj_id = i;
             msgsnd(client_qids[client_id], &list_res, MSG_SIZE, 0);
         }
@@ -153,6 +125,34 @@ void connect_clients(int client_src, int client_dest){
 
 void disconnect_client(int client_id){
     client_available[client_id] = 1;
+}
+
+void handle_msg(struct msgbuf msg){
+    switch (msg.mtype)
+    {
+    case STOP:             
+        /* code */
+        break;
+    
+    case DISCONNECT:             
+        disconnect_client(msg.obj_id);
+        break;
+
+    case INIT:             
+        init_client(msg.obj_key);
+        break;
+
+    case LIST:             
+        list_clients(msg.obj_id);
+        break;
+
+    case CONNECT:             
+        connect_clients(msg.obj_id, atoi(msg.mtext));
+        break;
+
+    default:
+        error("Invalid msg type.\n");
+    }
 }
 
 int main(){
