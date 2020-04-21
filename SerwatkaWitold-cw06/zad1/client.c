@@ -8,7 +8,7 @@
 #include <signal.h>
 #include <string.h>
 
-int server_queue, client_queue, client_id;
+int server_queue, client_queue, client_id, connected = -1;
 
 void sigint_handler(){
 
@@ -69,7 +69,8 @@ void handle_command(char* str){
         list();
     }
     else if(strcmp(str, "connect") == 0){
-
+        int connect_id = strtok(NULL, " ");
+        connect_with(connect_id);
     }
     else if(strcmp(str, "disconnect") == 0){
 
@@ -96,6 +97,77 @@ void list(){
     while(msgrcv(client_queue, &list_req, MSG_SIZE, LIST, 0) > 0){
         printf("%d\n", list_req.obj_id);
     }
+}
+
+void connect_with(char* id){
+    struct msgbuf connect_req;
+
+    connect_req.mtype = CONNECT;
+    strcpy(connect_req.mtext, id);
+    connect_req.obj_id = client_id;
+
+    if(msgsnd(server_queue, &connect_req, MSG_SIZE, 0) == -1){
+        printf("Failed to connect with client %s.\n", id);
+        return;
+    }
+    printf("Connection request sent.\n");
+
+    if(msgrcv(client_queue, &connect_req, MSG_SIZE, CONNECT, 0) == -1){
+        printf("Failed to receive connection key.\n");
+        return;
+    }
+    printf("Connection key received.\n");
+
+    chat(connect_req.obj_key);
+}
+
+void chat(key_t key){
+    if((connected = msgget(key, 0)) == -1){
+        printf("Could not initialize chat.\n");
+        return;
+    }
+
+    pid_t chat = fork();
+
+    if(chat == 0){
+        struct msgbuf chat_read;
+
+        while(1){
+            msgrcv(connected, &chat_read, MSG_SIZE, CONNECT, 0);
+            printf("%s\n", chat_read.mtext);
+        }
+    }
+    else if(chat > 0){
+        struct msgbuf chat_send;
+        chat_send.mtype = CONNECT;
+        char text[MSG_SIZE];
+
+        while(1){
+            scanf("%s", text);
+
+            if(strcmp(text, "/disconnect") == 0){
+                printf("Are you sure? [y/n]\n");
+                scanf("%s", text);
+
+                if(strcmp(text, "y") == 0){
+                    disconnect();
+                }
+            }
+            else{
+                strcpy(chat_send.mtext, text);
+                
+                if(msgsnd(connected, &chat_send, MSG_SIZE, 0) == -1){
+                    printf("Failed to send message.\n");
+                }
+            }
+        }
+    }
+    else{
+        printf("Could not initialize chat.\n");
+        return;
+    }
+
+    connected = -1;
 }
 
 int main(){
