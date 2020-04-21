@@ -17,6 +17,9 @@ void sigint_handler(){
 void initialize(){
     printf("Initializing client...\n");
 
+    signal(SIGINT, sigint_handler);
+    printf("Signal handlers set.\n");
+
     char* file_path;
     if((file_path = getenv("HOME")) == -1){
         error("Error getting file path.\n");
@@ -128,13 +131,20 @@ void chat(key_t key){
     }
 
     pid_t chat = fork();
+    pid_t parent_pid = getpid();
 
     if(chat == 0){
         struct msgbuf chat_read;
 
         while(1){
-            msgrcv(connected, &chat_read, MSG_SIZE, CONNECT, 0);
-            printf("%s\n", chat_read.mtext);
+            msgrcv(connected, &chat_read, MSG_SIZE, 0, 0);
+            if(chat_read.mtype == CONNECT){
+                printf("%s\n", chat_read.mtext);
+            }
+            if(chat_read.mtype == DISCONNECT){
+                printf("Your partner disconnected.\n");
+                exit(EXIT_SUCCESS);
+            }
         }
     }
     else if(chat > 0){
@@ -145,12 +155,18 @@ void chat(key_t key){
         while(1){
             scanf("%s", text);
 
+            if(kill(0, chat) == -1){
+                disconnect(key);
+                break;
+            }
+
             if(strcmp(text, "/disconnect") == 0){
                 printf("Are you sure? [y/n]\n");
                 scanf("%s", text);
 
                 if(strcmp(text, "y") == 0){
-                    disconnect();
+                    disconnect(key);
+                    break;
                 }
             }
             else{
@@ -165,6 +181,16 @@ void chat(key_t key){
     else{
         printf("Could not initialize chat.\n");
         return;
+    }
+}
+
+void disconnect(int key){
+    struct msgbuf disconnect_req;
+    disconnect_req.mtype = DISCONNECT;
+    disconnect_req.obj_key = key;
+
+    if(msgsnd(server_queue, &disconnect_req, MSG_SIZE, 0) == -1){
+        error("Failed to send disconnect request.\n");
     }
 
     connected = -1;
