@@ -1,8 +1,12 @@
 #include "header.h"
 #include <sys/msg.h>
 #include <sys/ipc.h>
+#include <sys/types.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <unistd.h>
+#include <errno.h>
+#include <string.h>
 
 int queue_id, size = 0;
 int client_qids[MAXCLIENTS];
@@ -52,6 +56,7 @@ void sigint_handler(){
             msgrcv(queue_id, &receive, MSG_SIZE, STOP, 0);
             client_qids[receive.obj_id] = -1;
             size--;
+            printf("Received STOP signal from client number %d.\n", receive.obj_id);
         }
     }
     else{
@@ -59,6 +64,7 @@ void sigint_handler(){
     }
 
     msgctl(queue_id, IPC_RMID, NULL);
+    printf("Server shutdown .\nGoodbye\n");
 }
 
 void initialize(){
@@ -92,16 +98,22 @@ void initialize(){
     printf("Server initialized.\n");
 }
 
-void init_client(int object_key){
-    if(MAXCLIENTS <= size){
+void init_client(key_t object_key, int object_qid){
+    if(MAXCLIENTS < size){
         return;
+    }
+
+    printf("%d\n%d\n", object_qid, object_key);
+
+    if(msgget(object_key, 0666 | IPC_CREAT | IPC_EXCL) == -1){
+        if(errno != EEXIST){
+            printf("%s\n", strerror(errno));
+            error("could not get access to client queue.\n");
+        }
     }
 
     int id = find_new_place();
-    if((client_qids[id] = msgget(object_key, IPC_CREAT)) == -1){
-        return;
-    }
-
+    client_qids[id] = object_qid;
     client_keys[id] = object_key;
     client_available[id] = 1;
     struct msgbuf msg;
@@ -109,6 +121,8 @@ void init_client(int object_key){
     msg.mtype = INIT;
 
     if(msgsnd(client_qids[id], &msg, MSG_SIZE, 0) == -1){
+            printf("%s\n", strerror(errno));
+            error("could not get access to client queue.\n");
         error("Could not send respond to client.\n");
     }
 }
@@ -155,8 +169,8 @@ void disconnect_client(int client_id){
     client_available[client_id] = 1;
 }
 
-void handle_msg(struct msgbuf msg){
-    switch (msg.mtype)
+void handle_msg(struct msgbuf* msg){
+    switch (msg->mtype)
     {
     case STOP:             
         raise(SIGINT);
@@ -164,19 +178,19 @@ void handle_msg(struct msgbuf msg){
         break;
     
     case DISCONNECT:             
-        disconnect_client(msg.obj_id);
+        disconnect_client(msg->obj_id);
         break;
 
     case INIT:             
-        init_client(msg.obj_key);
+        init_client(msg->obj_key, msg->obj_id);
         break;
 
     case LIST:             
-        list_clients(msg.obj_id);
+        list_clients(msg->obj_id);
         break;
 
     case CONNECT:             
-        connect_clients(msg.obj_id, atoi(msg.mtext));
+        connect_clients(msg->obj_id, atoi(msg->mtext));
         break;
 
     default:
@@ -193,7 +207,7 @@ int main(){
             error("Could not receive message.\n");
         }
 
-        handle_msg(msg);
+        handle_msg(&msg);
     }
 
     return 0;

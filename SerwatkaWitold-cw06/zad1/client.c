@@ -51,23 +51,24 @@ void initialize(){
     printf("Connected to server queue.\n");
 
     key_t object_key;
-    if((object_key = ftok(file_path, getpid())) == -1){
+    if((object_key = ftok(file_path, (char)getpid())) == -1){
         error("Could not get client key.\n");
     }
     printf("Obtained client key.\n");
 
+    if((client_queue = msgget(object_key, IPC_CREAT | 0666)) == -1){
+        error("Could not get client queue.\n");
+    }
+    printf("Client queue set.\n%d\n", client_queue);
+
     struct msgbuf init_msg;
     init_msg.mtype = INIT;
     init_msg.obj_key = object_key;
+    init_msg.obj_id = client_queue;
     if(msgsnd(server_queue, &init_msg, MSG_SIZE, 0) == -1){
         error("Failed to send object key to server.\n");
     }
     printf("Object key sent to server.\n");
-
-    if((client_queue = msgget(object_key, 0)) == -1){
-        error("Could not get client queue.\n");
-    }
-    printf("Client queue set.\n");
 
     if(msgrcv(client_queue, &init_msg, MSG_SIZE, INIT, 0) == -1){
         error("Could not get client id.\n");

@@ -5,7 +5,7 @@
 #include <signal.h>
 #include <stdio.h>
 
-#define MSG_SIZE 256
+#define MSG_SIZE 16
 #define PATHLENGTH 128
 #define MAXCLIENTS 10
 #define STOP  0
@@ -13,7 +13,7 @@
 #define INIT 2
 #define LIST 3
 #define CONNECT 4
-#define PROJECT 'a'
+#define PROJECT 'b'
 
 struct msgbuf
 {
