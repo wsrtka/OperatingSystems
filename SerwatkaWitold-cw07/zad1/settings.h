@@ -6,6 +6,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define PROJECT 'a'
+#define NSEMS 20
+
 void error(char* msg){
     printf("%s\n", msg);
     printf("%s\n", strerror(errno));
