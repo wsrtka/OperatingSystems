@@ -3,8 +3,12 @@
 
 //settings defining key creation
 #define SEMAPHORE 's'
-#define COUNTER 'c'
-#define ARRAY 'a'
+#define COUNTER 'd'
+#define ARRAY 'b'
+
+//settings for order state
+#define RECEIVED 0
+#define LOADED 1
 
 //settings defining program variables
 #define SHOP_CAP 20

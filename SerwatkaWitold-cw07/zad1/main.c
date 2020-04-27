@@ -2,17 +2,45 @@
 #include "shared.h"
 
 #include <unistd.h>
+#include <signal.h>
 
 int semtab;
+int arrid;
 int* arr;
+int countid;
 Counter* counter;
+pid_t child_pids[RECEIVER_NO + LOADER_NO + SENDER_NO];
 
 void close_shop(){
+	// for(int i = 0; i < RECEIVER_NO + LOADER_NO + SENDER_NO; i++){
+	// 	if(kill(child_pids[i], SIGINT) == -1){
+	// 		printf("Failed to tell worker %d to go home.\n", i);
+	// 	}
+	// }
 
+	//invalid argument in all??
 
+	if(semctl(semtab, 0, IPC_RMID) == -1){
+		printf("Could not close semaphore array.\n");
+		printf("%s\n", strerror(errno));
+	}
 
-	if(semctl(semtab, 0, IPC_RMID, 0) == -1){
-		error("Could not close semaphore array.");
+	if(shmdt(arr) == -1){
+		printf("Could not detach shared array.\n");
+		printf("%s\n", strerror(errno));
+	}
+	if(shmctl(arrid, IPC_RMID, NULL) == -1){
+		printf("Could not close shared array.\n");
+		printf("%s\n", strerror(errno));
+	}
+
+	if(shmdt(counter) == -1){
+		printf("Could not detach shared array.\n");
+		printf("%s\n", strerror(errno));
+	}
+	if(shmctl(countid, IPC_RMID, NULL) == -1){
+		printf("Could not close shared array.\n");
+		printf("%s\n", strerror(errno));
 	}
 }
 
@@ -38,7 +66,6 @@ int create_sems(){
 int* create_array(){
 	key_t key = get_key(ARRAY);
 
-	int arrid;
 	if((arrid = shmget(key, SHOP_CAP * sizeof(int), IPC_CREAT | IPC_EXCL | 0666)) == -1){
 		error("Could not create shared array.");
 	}
@@ -48,14 +75,13 @@ int* create_array(){
 		arr[i] = 0;
 	}
 
-	return arrid;
+	return arr;
 }
 
 Counter* create_counter(){
 	key_t key = get_key(COUNTER);
 
-	int countid;
-	if((countid = shget(key, sizeof(Counter), IPC_CREAT | IPC_EXCL | 0666)) == -1){
+	if((countid = shmget(key, sizeof(Counter), IPC_CREAT | IPC_EXCL | 0666)) == -1){
 		error("Could not create shared counter.");
 	}
 
@@ -85,6 +111,9 @@ int main(){
 		else if(pid < 0){
 			error("Could not create receiver.");
 		}
+		else{
+			child_pids[i] = pid;
+		}
     }
 
 	for(int i = 0; i < LOADER_NO; i++){
@@ -96,6 +125,9 @@ int main(){
 		else if(pid < 0){
 			error("Could not create loader.");
 		}
+		else{
+			child_pids[RECEIVER_NO + i] = pid;
+		}
     }
 
 	for(int i = 0; i < SENDER_NO; i++){
@@ -106,6 +138,9 @@ int main(){
 		}
 		else if(pid < 0){
 			error("Could not create sender.");
+		}
+		else{
+			child_pids[RECEIVER_NO + LOADER_NO + i] = pid;
 		}
     }
 

@@ -6,21 +6,17 @@
 #include <sys/ipc.h>
 #include <sys/types.h>
 
-int main(int argc, char* argv[]){
-    if(argc != 2){
-        error("Invalid number of arguments, usage: ./receiver <key>");
-    }
+int* arr;
+Counter* counter;
 
-    printf("Opening shop!\n");
+void go_home(){
 
-	char* path = getenv("HOME");
-	key_t key = ftok(path, SEMAPHORE);
-	int semtab = semget(key, 0, 0666);
+}
 
-    int size;
-    if((size = semctl(semtab, 0, GETVAL)) == -1){
-        error("Could not get semaphore value.");
-    }
+void get_to_work(){
 
-    
+}
+
+int main(){
+
 }
