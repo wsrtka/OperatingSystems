@@ -92,6 +92,7 @@ Counter* create_counter(){
 	Counter* counter = (Counter *) shmat(countid, NULL, 0666);
 	counter -> to_prepare = 0;
 	counter -> to_send = 0;
+	counter -> max_id = 0;
 
 	return counter;
 }

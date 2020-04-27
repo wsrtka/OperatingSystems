@@ -27,6 +27,7 @@ union semnum{
 typedef struct Counter{
     int to_prepare;
     int to_send;
+    int max_id;
 } Counter;
 
 typedef struct Order{
@@ -153,6 +154,12 @@ char* gettimestamp(char* buffer){
     sprintf(buffer, "%s:%03d", timestamp, mil);
 
     return buffer;
+}
+
+//worker behaviour
+void go_home(){
+    detach(arr);
+    detach(counter);
 }
 
 #endif
