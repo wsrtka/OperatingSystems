@@ -15,8 +15,8 @@ void get_to_work(){
     signal(SIGINT, go_home);
     srand(time(NULL));
 
-    arr = get_array();
-    counter = get_counter();
+    arr = attach_array();
+    counter = attach_counter();
     semid = get_semaphores();
 }
 
@@ -32,6 +32,7 @@ int find_free_space(Order* arr, Counter* counter){
 
 int main(){
     get_to_work();
+    char buf[84];
 
     while(1){
         if(counter -> to_send + counter -> to_prepare < SHOP_CAP){
@@ -42,7 +43,7 @@ int main(){
             arr[free_space].state = 0;
             counter->to_prepare++;
 
-            printf("%d %s Dodałem liczbę: %d. Liczba zamówień do przygotowania: %d. Liczba zamówień do wysłania: %d.\n", getpid(), gettimestamp(), arr[free_space].num, counter->to_prepare, counter->to_send);
+            printf("%d %s Dodałem liczbę: %d. Liczba zamówień do przygotowania: %d. Liczba zamówień do wysłania: %d.\n", getpid(), gettimestamp(buf), arr[free_space].num, counter->to_prepare, counter->to_send);
 
             unlock_semaphore(semid, free_space);
         }

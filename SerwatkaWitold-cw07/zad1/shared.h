@@ -142,17 +142,17 @@ void unlock_semaphore(int semid, int num){
 }
 
 //getting timestamp
-char* gettimestamp(){
-    char timestamp[84];
+char* gettimestamp(char* buffer){
+    char timestamp[82];
 
     struct timeval time;
     gettimeofday(&time, NULL);
     int mil = time.tv_usec / 1000;
 
     strftime(timestamp, 80, "%Y-%m-%d %H:%M:%S", localtime(&time.tv_sec));
-    sprintf(timestamp, "%s:%03d", timestamp, mil);
+    sprintf(buffer, "%s:%03d", timestamp, mil);
 
-    return timestamp;
+    return buffer;
 }
 
 #endif
