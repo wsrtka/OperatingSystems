@@ -1,4 +1,5 @@
 #include "settings.h"
+#include "shared.h"
 
 #include <sys/shm.h>
 #include <sys/sem.h>
@@ -13,7 +14,7 @@ int main(int argc, char* argv[]){
     printf("Opening shop!\n");
 
 	char* path = getenv("HOME");
-	key_t key = ftok(path, PROJECT);
+	key_t key = ftok(path, SEMAPHORE);
 	int semtab = semget(key, 0, 0666);
 
     int size;
