@@ -6,5 +6,11 @@ main:
 receiver:
 	$(cc) -o receiver receiver.c
 
+loader:
+	$(cc) -o loader loader.c
+
+sender:
+	$(cc) -o sender sender.c
+
 clean:
-	rm -f main receiver
+	rm -f main receiver loader sender
