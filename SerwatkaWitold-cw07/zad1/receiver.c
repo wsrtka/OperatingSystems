@@ -17,8 +17,8 @@ void get_to_work(){
 
 int find_free_space(){
     for(int i = 0; i < SHOP_CAP; i++){
-        if(arr[(i + counter->max_id) % SHOP_CAP].num == 0){
-            return (i + counter->to_prepare + counter->to_send) % SHOP_CAP;
+        if(arr[(i + counter->max_id) % SHOP_CAP].state == -1){
+            return (i + counter->max_id) % SHOP_CAP;
         }
     }
 

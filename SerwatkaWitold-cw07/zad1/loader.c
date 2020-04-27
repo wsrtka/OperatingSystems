@@ -34,7 +34,7 @@ int main(){
         if((order_to_load = find_order_to_load()) != -1){
             lock_semaphore(semid, order_to_load);
 
-            arr[order_to_load].num *= 3;
+            arr[order_to_load].num *= 2;
             arr[order_to_load].state == 1;
             counter->to_prepare--;
             counter->to_send++;
