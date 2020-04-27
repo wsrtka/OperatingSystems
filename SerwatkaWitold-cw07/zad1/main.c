@@ -3,6 +3,10 @@
 
 #include <unistd.h>
 
+int semtab;
+int* arr;
+Counter* counter;
+
 void close_shop(){
 
 
@@ -68,9 +72,9 @@ int main(){
 	atexit(close_shop);
 	signal(SIGINT, close_shop);
 
-	int semtab = create_sems();
-	int* arr = create_array();
-	Counter* counter = create_counter();
+	semtab = create_sems();
+	arr = create_array();
+	counter = create_counter();
     
     for(int i = 0; i < RECEIVER_NO; i++){
         pid_t pid = fork();
