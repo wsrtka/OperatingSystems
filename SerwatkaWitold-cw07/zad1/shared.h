@@ -12,6 +12,9 @@
 #include <sys/shm.h>
 #include <sys/sem.h>
 #include <sys/ipc.h>
+#include <unistd.h>
+#include <sys/time.h>
+#include <time.h>
 
 //data types
 union semnum{
@@ -29,7 +32,7 @@ typedef struct Counter{
 typedef struct Order{
     int num;
     int state;
-};
+} Order;
 
 //utility functions
 void error(char* msg){
@@ -74,11 +77,11 @@ int get_array(){
     return arrid;
 }
 
-int* attach_array(){
+Order* attach_array(){
     int arrid = get_array();
-    int* ptr;
+    Order* ptr;
 
-    ptr = (int*) shmat(arrid, NULL, 0666);
+    ptr = (Order*) shmat(arrid, NULL, 0666);
     if((int)ptr == -1){
         error("Could not get shared array.");
     }
@@ -103,16 +106,53 @@ int get_counter(){
     return arrid;
 }
 
-int* attach_counter(){
+Counter* attach_counter(){
     int countid = get_counter();
-    int* ptr;
+    Counter* ptr;
 
-    ptr = (int*) shmat(countid, NULL, 0666);
+    ptr = (Counter*) shmat(countid, NULL, 0666);
     if((int)ptr == -1){
         error("Could not get shared counter.");
     }
 
     return ptr;
+}
+
+//semaphore locking
+void lock_semaphore(int semid, int num){
+    struct sembuf sops[1];
+    sops[0].sem_num = num;
+    sops[0].sem_op = -1;
+    sops[0].sem_flg = 0;
+
+    if(semop(semid, sops, 1) == -1){
+        error("Unable to lock semaphore.");
+    }
+}
+
+void unlock_semaphore(int semid, int num){
+    struct sembuf sops[1];
+    sops[0].sem_num = num;
+    sops[0].sem_op = 1;
+    sops[0].sem_flg = 0;
+
+    if(semop(semid, sops, 1) == -1){
+        error("Unable to unlock semaphore.");
+    }
+}
+
+//getting timestamp
+char* gettimestamp(){
+    char timestamp[84];
+
+    struct timeval time;
+    gettimeofday(&time, NULL);
+    int mil = time.tv_usec / 1000;
+
+    strftime(timestamp, 80, "%Y-%m-%d %H:%M:%S", localtime(&time.tv_sec));
+    sprintf(timestamp, "%s:%03d", timestamp, mil);
+
+    return timestamp;
 }
 
 #endif

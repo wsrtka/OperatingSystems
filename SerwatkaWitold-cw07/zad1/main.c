@@ -1,7 +1,6 @@
 #include "settings.h"
 #include "shared.h"
 
-#include <unistd.h>
 #include <signal.h>
 
 int semtab;
@@ -52,7 +51,11 @@ int create_sems(){
 		error("Could not initialize semaphore array.");
 	}
 
-	unsigned short init_val[SHOP_CAP] = {0};
+	unsigned short init_val[SHOP_CAP];
+	for(int i = 0; i < SHOP_CAP; i++){
+		init_val[SHOP_CAP] = 1;
+	}
+
 	union semnum arg;
 	arg.array = init_val;
 	
@@ -70,9 +73,10 @@ int* create_array(){
 		error("Could not create shared array.");
 	}
 
-	int* arr = (int*) shmat(arrid, NULL, 0666);
+	Order* arr = (Order*) shmat(arrid, NULL, 0666);
 	for(int i = 0; i < SHOP_CAP; i++){
-		arr[i] = 0;
+		arr[i].num = 0;
+		arr[i].state = -1;
 	}
 
 	return arr;
