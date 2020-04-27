@@ -5,6 +5,11 @@ int semid;
 Order* arr;
 Counter* counter;
 
+void go_home(){
+    detach(arr);
+    detach(counter);
+}
+
 void get_to_work(){
     atexit(go_home);
     signal(SIGINT, go_home);
@@ -35,7 +40,7 @@ int main(){
             lock_semaphore(semid, order_to_load);
 
             arr[order_to_load].num *= 2;
-            arr[order_to_load].state == 1;
+            arr[order_to_load].state = 1;
             counter->to_prepare--;
             counter->to_send++;
 

@@ -1,5 +1,7 @@
 cc = gcc -Wall
 
+all: clean main receiver loader sender
+
 main:
 	$(cc) -o main main.c
 

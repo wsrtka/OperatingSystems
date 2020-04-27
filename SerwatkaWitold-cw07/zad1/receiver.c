@@ -5,6 +5,11 @@ int semid;
 Order* arr;
 Counter* counter;
 
+void go_home(){
+    detach(arr);
+    detach(counter);
+}
+
 void get_to_work(){
     atexit(go_home);
     signal(SIGINT, go_home);

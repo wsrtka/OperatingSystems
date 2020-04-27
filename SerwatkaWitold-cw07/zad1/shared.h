@@ -156,10 +156,4 @@ char* gettimestamp(char* buffer){
     return buffer;
 }
 
-//worker behaviour
-void go_home(){
-    detach(arr);
-    detach(counter);
-}
-
 #endif
