@@ -2,9 +2,9 @@
 #define settings
 
 //settings defining key creation
-#define SEMAPHORE 's'
-#define COUNTER 'd'
-#define ARRAY 'b'
+#define SEMAPHORE ']'
+#define COUNTER '.'
+#define ARRAY '/'
 
 //settings for order state
 #define RECEIVED 0

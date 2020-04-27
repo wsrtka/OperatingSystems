@@ -46,6 +46,8 @@ int main(){
 
             unlock_semaphore(semid, order_to_send);
         }
+
+        sleep(1);
     }
 
     go_home();

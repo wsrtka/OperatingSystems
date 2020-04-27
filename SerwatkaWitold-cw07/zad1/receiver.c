@@ -48,6 +48,8 @@ int main(){
 
             unlock_semaphore(semid, free_space);
         }
+
+        sleep(1);
     }
 
     go_home();

@@ -17,7 +17,7 @@
 #include <time.h>
 
 //data types
-union semnum{
+union semum{
     int val;
     struct semid_ds* buf;
     unsigned short* array;

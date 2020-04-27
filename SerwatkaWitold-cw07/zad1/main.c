@@ -5,21 +5,19 @@
 
 int semtab;
 int arrid;
-int* arr;
+Order* arr;
 int countid;
 Counter* counter;
 pid_t child_pids[RECEIVER_NO + LOADER_NO + SENDER_NO];
 
 void close_shop(){
-	// for(int i = 0; i < RECEIVER_NO + LOADER_NO + SENDER_NO; i++){
-	// 	if(kill(child_pids[i], SIGINT) == -1){
-	// 		printf("Failed to tell worker %d to go home.\n", i);
-	// 	}
-	// }
+	for(int i = 0; i < RECEIVER_NO + LOADER_NO + SENDER_NO; i++){
+		if(kill(child_pids[i], SIGINT) == -1){
+			printf("Failed to tell worker %d to go home.\n", i);
+		}
+	}
 
-	//invalid argument in all??
-
-	if(semctl(semtab, 0, IPC_RMID) == -1){
+	if(semctl(semtab, 0, IPC_RMID, NULL) == -1){
 		printf("Could not close semaphore array.\n");
 		printf("%s\n", strerror(errno));
 	}
@@ -41,6 +39,8 @@ void close_shop(){
 		printf("Could not close shared array.\n");
 		printf("%s\n", strerror(errno));
 	}
+
+	exit(0);
 }
 
 int create_sems(){
@@ -53,10 +53,10 @@ int create_sems(){
 
 	unsigned short init_val[SHOP_CAP];
 	for(int i = 0; i < SHOP_CAP; i++){
-		init_val[SHOP_CAP] = 1;
+		init_val[i] = 1;
 	}
 
-	union semnum arg;
+	union semum arg;
 	arg.array = init_val;
 	
 	if(semctl(semid, 0, SETALL, arg) == -1){
@@ -69,7 +69,7 @@ int create_sems(){
 int* create_array(){
 	key_t key = get_key(ARRAY);
 
-	if((arrid = shmget(key, SHOP_CAP * sizeof(int), IPC_CREAT | IPC_EXCL | 0666)) == -1){
+	if((arrid = shmget(key, SHOP_CAP * sizeof(Order), IPC_CREAT | IPC_EXCL | 0666)) == -1){
 		error("Could not create shared array.");
 	}
 
@@ -148,6 +148,8 @@ int main(){
 			child_pids[RECEIVER_NO + LOADER_NO + i] = pid;
 		}
     }
+
+	sleep(60);
 
     printf("Shop closing.\n");
 
