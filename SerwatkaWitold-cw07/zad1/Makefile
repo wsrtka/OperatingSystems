@@ -1,4 +1,4 @@
-cc = gcc -Wall
+cc = gcc -Wall -lpthreadk -lrt
 
 all: clean main receiver loader sender
 

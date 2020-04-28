@@ -1,13 +1,14 @@
 #include "settings.h"
 #include "shared.h"
 
-int semid;
+sem_t** semid;
 Order* arr;
 Counter* counter;
 
 void go_home(){
-    detach(arr);
-    detach(counter);
+    detach(semid, SEMS_NAME, SHOP_CAP * sizeof(sem_t*));
+    detach(arr, ARR_NAME, SHOP_CAP * sizeof(Order));
+    detach(counter, COUNTER_NAME, sizeof(Counter));
 }
 
 void get_to_work(){
@@ -37,7 +38,9 @@ int main(){
 
     while(1){
         if((free_space = find_free_space()) != -1){
-            lock_semaphore(semid, free_space);
+            if(sem_wait(semid[free_space]) == -1){
+                error("Could not lock semaphore.");
+            }
 
             arr[free_space].num = (rand() % 10000) + 1;
             arr[free_space].state = 0;
@@ -46,7 +49,9 @@ int main(){
 
             printf("%d %s Dodałem liczbę: %d. Liczba zamówień do przygotowania: %d. Liczba zamówień do wysłania: %d.\n", getpid(), gettimestamp(buf), arr[free_space].num, counter->to_prepare, counter->to_send);
 
-            unlock_semaphore(semid, free_space);
+            if(sem_post(semid[free_space]) == -1){
+                error("Could not unlock semaphore.");
+            }
         }
 
         sleep(1);

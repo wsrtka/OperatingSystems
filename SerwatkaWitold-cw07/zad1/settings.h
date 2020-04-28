@@ -2,9 +2,14 @@
 #define settings
 
 //settings defining key creation
-#define SEMAPHORE ']'
-#define COUNTER '.'
-#define ARRAY '/'
+#define SEMAPHORE 's'
+#define COUNTER 'c'
+#define ARRAY 'a'
+
+//settings defining shared memory names
+#define ARR_NAME "array"
+#define SEMS_NAME "semarr"
+#define COUNTER_NAME "counter"
 
 //settings for order state
 #define RECEIVED 0

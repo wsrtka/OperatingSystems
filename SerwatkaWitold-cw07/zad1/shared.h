@@ -9,12 +9,13 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <signal.h>
-#include <sys/shm.h>
-#include <sys/sem.h>
-#include <sys/ipc.h>
 #include <unistd.h>
 #include <sys/time.h>
 #include <time.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <semaphore.h>
 
 //data types
 union semum{
@@ -42,47 +43,54 @@ void error(char* msg){
     exit(EXIT_FAILURE);
 }
 
-key_t get_key(char identifier){
-    char* path;
-	if((path = getenv("HOME")) == NULL){
-		error("Could not get environment variable.");
-	}
-
-	key_t key;
-	if((key = ftok(path, identifier)) == -1){
-		error("Could not get object key.");
-	}
-
-    return key;
+char* get_name(char* buf, int id){
+    sprintf(buf, "/%d", id);
+    return buf;
 }
 
 int get_semaphores(){
-    key_t key = get_key(SEMAPHORE);
+    int fd;
+    if((fd = shm_open(SEMS_NAME, O_RDWR, 0666)) == -1){
+        error("Could not get semaphore array.");
+    }
 
-    int semid;
-	if((semid = semget(key, SHOP_CAP, 0666)) == -1){
-		error("Could not initialize semaphore array.");
-	}
+    if(ftruncate(fd, SHOP_CAP * sizeof(sem_t*)) == -1){
+        error("Could not truncate semaphore array.");
+    }
 
-    return semid;
+    return fd;
+}
+
+sem_t** attach_semaphores(){
+    int semfd = get_semaphores();
+    sem_t** ptr;
+
+    ptr = (sem_t*) mmap(NULL, SHOP_CAP * sizeof(sem_t*), PROT_READ | PROT_WRITE, MAP_SHARED, semfd, 0);
+    if((int)ptr == -1){
+        error("Could not get shared sem array.");
+    }
+
+    return ptr;
 }
 
 int get_array(){
-    key_t key = get_key(ARRAY);
-
-    int arrid;
-    if((arrid = shmget(key, 0, 0666)) == -1){
-        error("Could not get array key.");
+    int fd;
+    if((fd = shm_open(ARR_NAME, O_RDWR, 0666)) == -1){
+        error("Could not get shared array fd.");
     }
 
-    return arrid;
+    if(ftruncate(fd, SHOP_CAP * sizeof(Order)) == -1){
+        error("Could not truncate shared array.");
+    }
+
+    return fd;
 }
 
 Order* attach_array(){
-    int arrid = get_array();
+    int arrfd = get_array();
     Order* ptr;
 
-    ptr = (Order*) shmat(arrid, NULL, 0666);
+    ptr = (Order*) mmap(NULL, SHOP_CAP * sizeof(Order), PROT_READ | PROT_WRITE, MAP_SHARED, arrfd, 0);
     if((int)ptr == -1){
         error("Could not get shared array.");
     }
@@ -90,56 +98,39 @@ Order* attach_array(){
     return ptr;
 }
 
-void detach(const void* addr){
-    if(shmdt(addr) == -1){
+void detach(const void* addr, char* name, size_t len){
+    if(munmap(addr, len) == -1){
         error("Could not detach.");
+    }
+
+    if(shm_unlink(name) == -1){
+        error("Could not unlink.");
     }
 }
 
 int get_counter(){
-    key_t key = get_key(COUNTER);
-
-    int arrid;
-    if((arrid = shmget(key, 0, 0666)) == -1){
-        error("Could not get array key.");
+    int fd;
+    if((fd = shm_open(COUNTER_NAME, O_RDWR, 0666)) == -1){
+        error("Could not get shared counter fd.");
     }
 
-    return arrid;
+    if(ftruncate(fd, sizeof(Counter)) == -1){
+        error("Could not truncate shared counter.");
+    }
+
+    return fd;
 }
 
 Counter* attach_counter(){
-    int countid = get_counter();
+    int countfd = get_counter();
     Counter* ptr;
 
-    ptr = (Counter*) shmat(countid, NULL, 0666);
+    ptr = (Counter*) mmap(NULL, sizeof(Counter), PROT_READ | PROT_WRITE, MAP_SHARED, countfd, 0);
     if((int)ptr == -1){
         error("Could not get shared counter.");
     }
 
     return ptr;
-}
-
-//semaphore locking
-void lock_semaphore(int semid, int num){
-    struct sembuf sops[1];
-    sops[0].sem_num = num;
-    sops[0].sem_op = -1;
-    sops[0].sem_flg = 0;
-
-    if(semop(semid, sops, 1) == -1){
-        error("Unable to lock semaphore.");
-    }
-}
-
-void unlock_semaphore(int semid, int num){
-    struct sembuf sops[1];
-    sops[0].sem_num = num;
-    sops[0].sem_op = 1;
-    sops[0].sem_flg = 0;
-
-    if(semop(semid, sops, 1) == -1){
-        error("Unable to unlock semaphore.");
-    }
 }
 
 //getting timestamp

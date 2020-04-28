@@ -3,10 +3,8 @@
 
 #include <signal.h>
 
-int semtab;
-int arrid;
+sem_t** semtab;
 Order* arr;
-int countid;
 Counter* counter;
 pid_t child_pids[RECEIVER_NO + LOADER_NO + SENDER_NO];
 
@@ -17,25 +15,34 @@ void close_shop(){
 		}
 	}
 
-	if(semctl(semtab, 0, IPC_RMID, NULL) == -1){
-		printf("Could not close semaphore array.\n");
+	char name[8];
+	for(int i = 0; i < SHOP_CAP; i++){
+		sem_close(semtab[i]);
+		sem_unlink(get_name(name, i));
+	}
+	if(munmap(semtab, SHOP_CAP * sizeof(sem_t*))== -1){
+		printf("Could not detach shared sem array.\n");
+		printf("%s\n", strerror(errno));
+	}
+	if(shm_unlink(SEMS_NAME) == -1){
+		printf("Could not close shared sem array.\n");
 		printf("%s\n", strerror(errno));
 	}
 
-	if(shmdt(arr) == -1){
+	if(munmap(arr, SHOP_CAP * sizeof(Order))== -1){
 		printf("Could not detach shared array.\n");
 		printf("%s\n", strerror(errno));
 	}
-	if(shmctl(arrid, IPC_RMID, NULL) == -1){
+	if(shm_unlink(ARR_NAME) == -1){
 		printf("Could not close shared array.\n");
 		printf("%s\n", strerror(errno));
 	}
 
-	if(shmdt(counter) == -1){
+	if(munmap(counter, sizeof(Counter)) == -1){
 		printf("Could not detach shared array.\n");
 		printf("%s\n", strerror(errno));
 	}
-	if(shmctl(countid, IPC_RMID, NULL) == -1){
+	if(shm_unlink(COUNTER_NAME) == -1){
 		printf("Could not close shared array.\n");
 		printf("%s\n", strerror(errno));
 	}
@@ -43,37 +50,38 @@ void close_shop(){
 	exit(0);
 }
 
-int create_sems(){
-	key_t key = get_key(SEMAPHORE);
-	
-	int semid;
-	if((semid = semget(key, SHOP_CAP, IPC_CREAT | IPC_EXCL | 0666)) == -1){
-		error("Could not initialize semaphore array.");
+sem_t** create_sems(){
+	int fd;
+	if((fd = shm_open(SEMS_NAME, O_RDWR | O_CREAT | O_EXCL, 0666)) == -1){
+		error("Could not create semaphore array.");
 	}
 
-	unsigned short init_val[SHOP_CAP];
+	if(ftruncate(fd, SHOP_CAP * sizeof(sem_t*)) == -1){
+		error("Could not set semaphore array size.");
+	}
+
+	sem_t** sems = (sem_t**) mmap(NULL, SHOP_CAP * sizeof(sem_t*), PROT_WRITE | PROT_READ, MAP_SHARED, fd, 0);
+
+	char name[8];
 	for(int i = 0; i < SHOP_CAP; i++){
-		init_val[i] = 1;
+		get_name(name, i);
+		sems[i] = sem_open(name, O_RDWR, MAP_SHARED, 1);
 	}
 
-	union semum arg;
-	arg.array = init_val;
-	
-	if(semctl(semid, 0, SETALL, arg) == -1){
-		error("Could not initialize semaphore values.");
-	}
-
-	return semid;
+	return sems;
 }
 
 Order* create_array(){
-	key_t key = get_key(ARRAY);
-
-	if((arrid = shmget(key, SHOP_CAP * sizeof(Order), IPC_CREAT | IPC_EXCL | 0666)) == -1){
+	int fd;
+	if((fd = shm_open(ARR_NAME, O_RDWR | O_CREAT | O_EXCL, 0666)) == -1){
 		error("Could not create shared array.");
 	}
 
-	Order* arr = (Order*) shmat(arrid, NULL, 0666);
+	if(ftruncate(fd, SHOP_CAP * sizeof(Order)) == -1){
+		error("Could not set array size.");
+	}
+
+	Order* arr = (Order*) mmap(NULL, SHOP_CAP * sizeof(Order), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	for(int i = 0; i < SHOP_CAP; i++){
 		arr[i].num = 0;
 		arr[i].state = -1;
@@ -83,13 +91,16 @@ Order* create_array(){
 }
 
 Counter* create_counter(){
-	key_t key = get_key(COUNTER);
-
-	if((countid = shmget(key, sizeof(Counter), IPC_CREAT | IPC_EXCL | 0666)) == -1){
+	int fd;
+	if((fd = shm_open(COUNTER_NAME, O_RDWR | O_CREAT | O_EXCL, 0666)) == -1){
 		error("Could not create shared counter.");
 	}
 
-	Counter* counter = (Counter *) shmat(countid, NULL, 0666);
+	if(ftruncate(fd, sizeof(Counter)) == -1){
+		error("Could not set counter size.");
+	}
+
+	Counter* counter = (Counter *) mmap(NULL, SHOP_CAP * sizeof(Order), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	counter -> to_prepare = 0;
 	counter -> to_send = 0;
 	counter -> max_id = 0;
