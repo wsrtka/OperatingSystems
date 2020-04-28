@@ -66,7 +66,7 @@ int create_sems(){
 	return semid;
 }
 
-int* create_array(){
+Order* create_array(){
 	key_t key = get_key(ARRAY);
 
 	if((arrid = shmget(key, SHOP_CAP * sizeof(Order), IPC_CREAT | IPC_EXCL | 0666)) == -1){

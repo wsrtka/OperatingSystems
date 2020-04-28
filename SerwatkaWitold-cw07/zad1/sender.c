@@ -23,7 +23,7 @@ void get_to_work(){
 int find_order_to_send(){
     for(int i = 0; i < SHOP_CAP; i++){
         if(arr[(i + counter->max_id - counter->to_prepare - counter->to_send) % SHOP_CAP].state == 1){
-            return (i + counter->to_prepare + counter->to_send) % SHOP_CAP;
+            return (i + counter->max_id - counter->to_prepare - counter->to_send) % SHOP_CAP;
         }
     }
 

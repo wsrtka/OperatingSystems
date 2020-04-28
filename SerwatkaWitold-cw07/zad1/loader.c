@@ -22,8 +22,8 @@ void get_to_work(){
 
 int find_order_to_load(){
     for(int i = 0; i < SHOP_CAP; i++){
-        if(arr[(i + counter->max_id - counter->to_send - counter->to_send) % SHOP_CAP].state == 0){
-            return (i + counter->max_id - counter->to_send - counter->to_send) % SHOP_CAP;
+        if(arr[(i + counter->max_id - counter->to_prepare - counter->to_send) % SHOP_CAP].state == 0){
+            return (i + counter->max_id - counter->to_prepare - counter->to_send) % SHOP_CAP;
         }
     }
 
