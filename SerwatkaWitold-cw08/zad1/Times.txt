@@ -1,0 +1,68 @@
+Thread 140153349478144 worked for 0.527 seconds
+Main function finished after 0.760 seconds
+
+Thread 140349870819072 worked for 0.931 seconds
+Thread 140349862426368 worked for 0.523 seconds
+Main function finished after 0.1056 seconds
+
+Thread 140619860289280 worked for 0.1200 seconds
+Thread 140619851896576 worked for 0.709 seconds
+Thread 140619843503872 worked for 0.572 seconds
+Thread 140619835111168 worked for 0.501 seconds
+Main function finished after 0.1354 seconds
+
+Thread 140445619521280 worked for 0.1011 seconds
+Thread 140445611128576 worked for 0.742 seconds
+Thread 140445602735872 worked for 0.709 seconds
+Thread 140445594343168 worked for 0.548 seconds
+Thread 140445585950464 worked for 0.657 seconds
+Thread 140445577557760 worked for 0.539 seconds
+Thread 140445569165056 worked for 0.1230 seconds
+Thread 140445560772352 worked for 0.550 seconds
+Main function finished after 0.2648 seconds
+
+Thread 140093317453568 worked for 0.552 seconds
+Main function finished after 0.850 seconds
+
+Thread 140527600781056 worked for 0.307 seconds
+Thread 140527592388352 worked for 0.323 seconds
+Main function finished after 0.688 seconds
+
+Thread 140147357161216 worked for 0.527 seconds
+Thread 140147348768512 worked for 0.280 seconds
+Thread 140147340375808 worked for 0.272 seconds
+Thread 140147331983104 worked for 0.279 seconds
+Main function finished after 0.10425 seconds
+
+Thread 139974403823360 worked for 0.103 seconds
+Thread 139974395430656 worked for 0.128 seconds
+Thread 139974387037952 worked for 0.125 seconds
+Thread 139974378645248 worked for 0.125 seconds
+Thread 139974370252544 worked for 0.127 seconds
+Thread 139974361859840 worked for 0.84 seconds
+Thread 139974353467136 worked for 0.55 seconds
+Thread 139974345074432 worked for 0.107 seconds
+Main function finished after 0.12315 seconds
+
+Thread 140425700882176 worked for 0.616 seconds
+Main function finished after 0.12723 seconds
+
+Thread 140467160696576 worked for 0.292 seconds
+Thread 140467152303872 worked for 0.283 seconds
+Main function finished after 0.4848 seconds
+
+Thread 139841174456064 worked for 0.164 seconds
+Thread 139841166063360 worked for 0.156 seconds
+Thread 139841157670656 worked for 0.141 seconds
+Thread 139841149277952 worked for 0.152 seconds
+Main function finished after 0.12392 seconds
+
+Thread 140530706835200 worked for 0.86 seconds
+Thread 140530698442496 worked for 0.81 seconds
+Thread 140530690049792 worked for 0.78 seconds
+Thread 140530681657088 worked for 0.73 seconds
+Thread 140530673264384 worked for 0.77 seconds
+Thread 140530664871680 worked for 0.86 seconds
+Thread 140530656478976 worked for 0.77 seconds
+Thread 140530648086272 worked for 0.70 seconds
+Main function finished after 0.2632 seconds
