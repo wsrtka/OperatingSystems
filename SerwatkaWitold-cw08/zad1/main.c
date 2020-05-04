@@ -93,8 +93,6 @@ void read_image(FILE* file, int width, int heigth, int** image){
 void* sign_function(void* arg){
     thread_args* args = (thread_args*) arg;
 
-    printf("%d, %d\n", args->from, args->to);
-
     for(int i = 0; i < args->img_width; i++){
 
         for(int j = 0; j < args->img_heigth; j++){
@@ -137,8 +135,97 @@ void thread_sign(const int thread_number, thread_args* args, pthread_t* threads)
 }
 
 //==========BLOCK MODE============//
+void* block_function(void* arg){
+    thread_args* args = (thread_args*) arg;
+
+    printf("BLOCKIODSAD.\n");
+    printf("%d, %d\n", args->from, args->to);
+
+    for(int i = args->from; i < args->to; i++){
+
+        for(int j = 0; j < args->img_heigth; j++){
+            args->histogram[args->img[i][j]]++;
+        }
+
+    }
+
+    return NULL;
+}
+
+void thread_block(const int thread_number, thread_args* args, pthread_t* threads){
+    int range = args->img_width / thread_number;
+
+    thread_args* final[thread_number];
+
+    for(int i = 0; i < thread_number; i++){
+        final[i] = malloc(sizeof(thread_args));
+
+        final[i]->from = i * range;
+        final[i]->to = (i+1) * range;
+
+        printf("%d, %d\n", final[i]->from, final[i]->to);
+
+        if(i == thread_number - 1 && final[i]->to <= args->img_width){
+            final[i]->to = args->img_width;
+        }
+
+        final[i]->histogram = args->histogram;
+        final[i]->img = args->img;
+        final[i]->img_heigth = args->img_heigth;
+        final[i]->img_width = args->img_width;
+
+        if(pthread_create(&threads[i], NULL, block_function, (void *) final[i]) != 0){
+            error("Could not create thread.");
+        }
+    }
+}
 
 //==========INTERLEAVED MODE============//
+void* interleaved_function(void* arg){
+    thread_args* args = (thread_args*) arg;
+
+    printf("%d, %d\n", args->from, args->to);
+
+    for(int i = 0; i < args->img_width; i++){
+
+        for(int j = 0; j < args->img_heigth; j++){
+
+            if(args->img[i][j] >= args->from && args->img[i][j] < args->to){
+                args->histogram[args->img[i][j]]++;
+            }
+
+        }
+
+    }
+
+    return NULL;
+}
+
+void thread_interleaved(const int thread_number, thread_args* args, pthread_t* threads){
+    int range = 256 / thread_number;
+
+    thread_args* final[thread_number];
+
+    for(int i = 0; i < thread_number; i++){
+        final[i] = malloc(sizeof(thread_args));
+
+        final[i]->from = i * range;
+        final[i]->to = (i+1) * range;
+
+        if(i == thread_number - 1 && args->to < 256){
+            final[i]->to = 256;
+        }
+
+        final[i]->histogram = args->histogram;
+        final[i]->img = args->img;
+        final[i]->img_heigth = args->img_heigth;
+        final[i]->img_width = args->img_width;
+
+        if(pthread_create(&threads[i], NULL, sign_function, (void *) final[i]) != 0){
+            error("Could not create thread.");
+        }
+    }
+}
 
 //==========MAIN============//
 int main(int argc, char* argv[]){
@@ -193,10 +280,10 @@ int main(int argc, char* argv[]){
         thread_sign(THREADS_NO, args, threads);
     }
     else if(strcmp(MODE, "block") == 0){
-
+        thread_block(THREADS_NO, args, threads);
     }
     else if(strcmp(MODE, "interleaved") == 0){
-
+        thread_interleaved(THREADS_NO, args, threads);
     }
     else{
         error("Invalid mode.");
