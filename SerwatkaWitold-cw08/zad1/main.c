@@ -4,6 +4,8 @@
 #include <errno.h>
 #include <string.h>
 
+int* histogram;
+
 typedef struct thread_args {
     int* histogram;
     int from;
@@ -88,6 +90,51 @@ void read_image(FILE* file, int width, int heigth, int** image){
 }
 
 //==========SIGN MODE============//
+void* sign_function(void* arg){
+    thread_args* args = (thread_args*) arg;
+
+    printf("%d, %d\n", args->from, args->to);
+
+    for(int i = 0; i < args->img_width; i++){
+
+        for(int j = 0; j < args->img_heigth; j++){
+
+            if(args->img[i][j] >= args->from && args->img[i][j] < args->to){
+                args->histogram[args->img[i][j]]++;
+            }
+
+        }
+
+    }
+
+    return NULL;
+}
+
+void thread_sign(const int thread_number, thread_args* args, pthread_t* threads){
+    int range = 256 / thread_number;
+
+    thread_args* final[thread_number];
+
+    for(int i = 0; i < thread_number; i++){
+        final[i] = malloc(sizeof(thread_args));
+
+        final[i]->from = i * range;
+        final[i]->to = (i+1) * range;
+
+        if(i == thread_number - 1 && args->to < 256){
+            final[i]->to = 256;
+        }
+
+        final[i]->histogram = args->histogram;
+        final[i]->img = args->img;
+        final[i]->img_heigth = args->img_heigth;
+        final[i]->img_width = args->img_width;
+
+        if(pthread_create(&threads[i], NULL, sign_function, (void *) final[i]) != 0){
+            error("Could not create thread.");
+        }
+    }
+}
 
 //==========BLOCK MODE============//
 
@@ -124,24 +171,47 @@ int main(int argc, char* argv[]){
         error("Invalid image metadata.");
     }
 
-    int histogram[256];
+    histogram = calloc(256, sizeof(int));
 
     //ustawianie argumentów dla funkcji threads
-    thread_args args;
-    args.histogram = histogram;
+    thread_args* args = malloc(sizeof(args));
+    args->histogram = histogram;
+    args->img_heigth = height;
+    args->img_width = width;
 
-    args.img = malloc(width * sizeof(int*));
+    args->img = malloc(width * sizeof(int*));
     for(int i = 0; i < width; i++){
-        args.img[i] = malloc(height * sizeof(int));
+        args->img[i] = malloc(height * sizeof(int));
     }
 
-    args.img_heigth = height;
-    args.img_width = width;
-
-    read_image(input_file, width, height, args.img);
+    read_image(input_file, width, height, args->img);
 
     //wątkowanie
-    
+    pthread_t threads[THREADS_NO];
+
+    if(strcmp(MODE, "sign") == 0){
+        thread_sign(THREADS_NO, args, threads);
+    }
+    else if(strcmp(MODE, "block") == 0){
+
+    }
+    else if(strcmp(MODE, "interleaved") == 0){
+
+    }
+    else{
+        error("Invalid mode.");
+    }
+
+    //podsumowanie
+    for(int i = 0; i < THREADS_NO; i++){
+        if(pthread_join(threads[i], NULL) == 0){
+            printf("Thread %d joined.\n", i);
+        }
+    }
+
+    for(int i = 0; i < 256; i++){
+        printf("%d\n", histogram[i]);
+    }
 
     return 0;
 }
