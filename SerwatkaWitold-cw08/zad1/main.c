@@ -359,7 +359,12 @@ int main(int argc, char* argv[]){
     fprintf(times_file, "Main function finished after ");
     fprint_time(time_diff(main_end, main_start), times_file);
 
+    //zapisanie histogramu i wyświetlenie go
     save_histogram(OUT_FILE);
+
+    FILE* gnuplot = popen("gnuplot -persistent", "w");
+    fprintf(gnuplot, "plot [0:255]'%s' with histogram \n", OUT_FILE);
+    fflush(gnuplot);
 
     return 0;
 }
