@@ -29,7 +29,15 @@ void setup_server(in_port_t port, char* path, int* socket_fd){
 }
 
 void close_server(){
+    if(socket_fd != -1){
+        if(close(socket_fd) != 0){
+            printf("Unable to close socket.\n");
+        }
 
+        if(unlink(socket_path) != 0){
+            printf("Unable to unlink socket.\n");
+        }
+    }
 }
 
 int main(int argc, char* argv[]){
