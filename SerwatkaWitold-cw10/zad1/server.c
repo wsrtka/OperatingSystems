@@ -59,6 +59,7 @@ void activate_client(int id){
 }
 
 void process_msg(int id){
+    
     char* buffer;
 
     int fd = clients[i].socket_fd;
@@ -71,8 +72,9 @@ void process_msg(int id){
         activate_client(id)
     }
     else{
-        //kod na gre w kolko i krzyzyk
+        write(clients[id].game_partner, buffer, strlen(buffer));
     }
+
 }
 
 void start_game(int id){
@@ -112,6 +114,9 @@ void start_game(int id){
             if(strcmp(buffer, "y") != 0){
                 continue;
             }
+
+            clients[i].game_partner = id;
+            clients[id].game_partner = i;
 
             if(rand() % 2 == 0){
                 write(clients[i].socket_fd, "x", 1);
@@ -258,7 +263,7 @@ void* client_manager_f(void* args){
 
         for(int i = 0; i < MAX_CLIENTS && check > 0; i++){
 
-            if(fds[i].revents == POLLIN){       //możliwe, że trzeba użyć &
+            if(!(fds[i].revents ^ POLLIN)){
                 pthread_mutex_lock(&mut_clients);
 
                 process_msg(i);
@@ -267,7 +272,7 @@ void* client_manager_f(void* args){
 
                 check--;
             }
-            else if(fds[i].revents == POLLHUP){
+            else if(!(fds[i].revents ^ POLLHUP)){
                 pthread_mutex_lock(&mut_clients);
 
                 close_client(i);
@@ -302,6 +307,7 @@ int main(int argc, char* argv[]){
         bzero((char*) clients[i].name, sizeof(clients[i].name));
         clients[i].registered = 0;
         clients[i].socket_fd = -1;
+        clients[i].game_partner = -1;
     }
 
     setup_server(inet_port, socket_path, &socket_fd);

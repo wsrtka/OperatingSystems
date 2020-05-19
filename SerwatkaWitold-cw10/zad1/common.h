@@ -27,6 +27,7 @@ typedef struct client{
     int socket_fd;
     int registered;
     int active;
+    int game_partner;
     char* name;
 } client;
 
