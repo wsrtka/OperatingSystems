@@ -8,6 +8,7 @@ client clients[MAX_CLIENTS];
 
 pthread_mutex_t mut_clients = PTHREAD_MUTEX_INITIALIZER;
 
+int non_active_players = 0;
 
 //===========SERVER FUNCTIONS=============//
 void setup_server(in_port_t port, char* path, int* socket_fd){
@@ -49,10 +50,12 @@ void close_client(int id){
     clients[id].name = "\0";
     close(clients[id].socket_fd);
     clients[id].socket_fd = -1;
+
+    non_active_players--;
 }
 
 void activate_client(int id){
-    clients[i].active = 1;
+    clients[i].registered = 1;
 }
 
 void process_msg(int id){
@@ -72,6 +75,52 @@ void process_msg(int id){
     }
 }
 
+void start_game(int id){
+
+    for(int i = 0; i < MAX_CLIENTS; i++){
+
+        if(clients[i].registered == 1 && clients[i].active == 0 && i != id){
+
+            struct pollfd* players;
+            players[0].fd = clients[i].socket_fd;
+            players[0].events = POLLIN;
+            players[1].fd = clients[id].socket_fd;
+            players[1].events = POLLIN;
+
+            write(clients[i].socket_fd, "Game parter found, are you ready?", 34);
+            write(clients[id].socket_fd, "Game parter found, are you ready?", 34);
+
+            int res = poll(players, 2, 15);
+
+            if(res != 2){
+                continue;
+            }
+            
+            char* buffer;
+            if(read(clients[i].socket_fd, buffer, MSG_LEN) < 1){
+                continue;
+            }
+
+            if(strcmp(buffer, "y") != 0){
+                continue;
+            }
+
+            if(read(clients[id].socket_fd, buffer, MSG_LEN) < 1){
+                continue;
+            }
+
+            if(strcmp(buffer, "y") != 0){
+                continue;
+            }
+
+            if(rand()%2)
+
+        }
+
+    }
+
+}
+
 //===========THREAD FUNCTIONS==============//
 void* connection_manager_f(void* args){
 
@@ -85,11 +134,10 @@ void* connection_manager_f(void* args){
         pthread_mutex_lock(&mut_clients);
 
         for(i = 0; i < MAX_CLIENTS; i++){
-            if(clients[i].socket_fd == -1){
-                clients[i].socket_fd = new_client_fd;
-                clients[i].registered = 1;
 
-                write(new_client_fd, "Client registered.", 18);
+            if(clients[i].socket_fd == -1){
+
+                write(new_client_fd, "Client request received.", 25);
 
                 struct pollfd* listener;
                 listener->fd = new_client_fd;
@@ -97,13 +145,28 @@ void* connection_manager_f(void* args){
 
                 poll(listener, 1, -1);
 
-                read(new_client_fd, clients[i].name, NAME_LEN);
+                char* new_name;
+                read(new_client_fd, new_name, NAME_LEN);
 
-                for(int i = 0; i < MAX_CLIENTS; i++){
-                    
+                int j;
+                for(j = 0; j < MAX_CLIENTS; j++){
+                    if(strcmp(clients[j].name, new_name) == 0){
+                        write(new_client_fd, "Client with this name already exists.", 38);
+                        break;
+                    }
                 }
 
+                if(j == MAX_CLIENTS){
+                    clients[i].socket_fd = new_client_fd;
+                    clients[i].registered = 1;
+                }
+
+                non_active_players++;
+
+                start_game(i);
+                
             }
+
         }
 
         if(i == MAX_CLIENTS){
@@ -143,7 +206,7 @@ void* ping_manager_f(void* args){
 
         for(int i = 0; i < MAX_CLIENTS; i++){
 
-            if(clients[i].registered == 1 && clients[i].active == 0){
+            if(clients[i].registered == 0 && clients[i].socket_fd != -1){
                 close_client(i);
             }
 
@@ -211,6 +274,8 @@ int main(int argc, char* argv[]){
     
     atexit(close_server);
     signal(SIGINT, close_server);
+
+    srand(time(NULL));
 
     if(argc != 3){
         error("Invalid number of arguments.");

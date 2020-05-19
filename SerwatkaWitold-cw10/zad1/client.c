@@ -37,7 +37,7 @@ void open_client(int* fd, char* path, char* name){
         error("Could not receive handshake from server.");
     }
 
-    if(strcmp(handshake, "Client registered.") == 0){
+    if(strcmp(handshake, "Client request received.") == 0){
         printf("Server handshake verified.\n");
     }
 
@@ -97,14 +97,6 @@ void play(char* game_state){
 
 }
 
-/*
- 1 | 2 | 3
----+---+---
- 4 | 5 | 6 
----+---+---
- 7 | 8 | 9 
-*/
-
 //===========MSG HANDLER=============//
 
 void handle_connection(){
@@ -126,8 +118,33 @@ void handle_connection(){
         if(strcmp(buffer, "ping") == 0){
             write(socket_fd, "pong", 4);
         }
-        else if(strcmp(buffer, "Client with this name already exists.") == 0){
+        else if(
+            strcmp(buffer, "Client with this name already exists.") == 0
+            || strcmp(buffer, "Could not find game partner.") == 0
+        ){
             error(buffer);
+        }
+        else if(strcmp(buffer, "Game partner found, are you ready?") == 0){
+            printf("%s [y/n]\n", buffer);
+            
+            char* answer;
+            scanf("%s", &answer);
+
+            write(socket_fd, answer, strlen(answer));
+
+            poll(listener, 1, -1);
+
+            read(socket_fd, buffer, MSG_LEN);
+
+            if(strcmp(buffer, "x") == 0){
+                game_symbol = "x";
+                printf("You begin! Your symbol is: %s\n", game_symbol);
+                play("123456789");
+            }
+            else{
+                game_symbol = "o";
+                printf("Waiting for opponent to finish turn. Your symbol is: %s\n", game_symbol);
+            }
         }
         else{
             play(buffer);
