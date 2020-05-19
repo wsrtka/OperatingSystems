@@ -79,17 +79,38 @@ void* ping_manager_f(void* args){
 
     while(1){
 
-        sleep(3);
+        sleep(PING_INTERVAL);
 
         pthread_mutex_lock(&mut_clients);
 
         for(int i = 0; i < MAX_CLIENTS; i++){
 
             if(clients[i].registered == 1){
-                
+                clients[i].active = 0;
+
+                write(clients[i].socket_fd, "ping", 4);
             }
 
         }
+
+        pthread_mutex_unlock(&mut_clients);
+
+        sleep(PING_INTERVAL);
+
+        pthread_mutex_unlock(&mut_clients);
+
+        for(int i = 0; i < MAX_CLIENTS; i++){
+
+            if(clients[i].registered == 1 && clients[i].active == 0){
+                clients[i].registered= 0;
+                clients[i].name = "\0";
+                close(clients[i].socket_fd);
+                clients[i].socket_fd = -1;
+            }
+
+        }
+
+        pthread_mutex_unlock(&mut_clients);
 
     }
 
