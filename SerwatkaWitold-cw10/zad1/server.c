@@ -90,7 +90,19 @@ void* connection_manager_f(void* args){
                 clients[i].registered = 1;
 
                 write(new_client_fd, "Client registered.", 18);
+
+                struct pollfd* listener;
+                listener->fd = new_client_fd;
+                listener->events = POLLIN;
+
+                poll(listener, 1, -1);
+
                 read(new_client_fd, clients[i].name, NAME_LEN);
+
+                for(int i = 0; i < MAX_CLIENTS; i++){
+                    
+                }
+
             }
         }
 
@@ -227,6 +239,8 @@ int main(int argc, char* argv[]){
     pthread_join(connection_manager, NULL);
     pthread_join(ping_manager, NULL);
     pthread_join(client_manager, NULL);
+
+    close_server();
 
     return 0;
 }
