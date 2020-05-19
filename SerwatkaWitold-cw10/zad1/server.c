@@ -87,8 +87,8 @@ void start_game(int id){
             players[1].fd = clients[id].socket_fd;
             players[1].events = POLLIN;
 
-            write(clients[i].socket_fd, "Game parter found, are you ready?", 34);
-            write(clients[id].socket_fd, "Game parter found, are you ready?", 34);
+            write(clients[i].socket_fd, "Game partner found, are you ready?", 34);
+            write(clients[id].socket_fd, "Game partner found, are you ready?", 34);
 
             int res = poll(players, 2, 15);
 
@@ -113,11 +113,24 @@ void start_game(int id){
                 continue;
             }
 
-            if(rand()%2)
+            if(rand() % 2 == 0){
+                write(clients[i].socket_fd, "x", 1);
+                write(clients[id].socket_fd, "o", 1);
+
+                return;
+            }
+            else{
+                write(clients[id].socket_fd, "x", 1);
+                write(clients[i].socket_fd, "o", 1);
+
+                return;
+            }
 
         }
 
     }
+
+    write(clients[id].socket_fd, "Could not find game partner.", 29);
 
 }
 
