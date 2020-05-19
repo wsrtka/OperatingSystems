@@ -51,8 +51,25 @@ void close_client(int id){
     clients[id].socket_fd = -1;
 }
 
-void process_msg(int fd){
+void activate_client(int id){
+    clients[i].active = 1;
+}
 
+void process_msg(int id){
+    char* buffer;
+
+    int fd = clients[i].socket_fd;
+
+    if(read(fd, buffer, MSG_SIZE) == -1){
+        error("Could not read incoming client message.");
+    }
+
+    if(strcmp(buffer, "pong") == 0){
+        activate_client(id)
+    }
+    else{
+        //kod na gre w kolko i krzyzyk
+    }
 }
 
 //===========THREAD FUNCTIONS==============//
@@ -156,17 +173,16 @@ void* client_manager_f(void* args){
             if(fds[i].revents == POLLIN){       //możliwe, że trzeba użyć &
                 pthread_mutex_lock(&mut_clients);
 
-                process_msg(fds[i].fd);
+                process_msg(i);
 
                 pthread_mutex_unlock(&mut_clients);
 
                 check--;
             }
-            
-            if(fds[i].revents == POLLHUP){
+            else if(fds[i].revents == POLLHUP){
                 pthread_mutex_lock(&mut_clients);
 
-                close_client(fds[i].fd);
+                close_client(i);
 
                 pthread_mutex_unlock(&mut_clients);
 

@@ -3,6 +3,7 @@
 
 #define MAX_CLIENTS 16
 #define NAME_LEN 64
+#define MSG_LEN 256;
 #define PING_INTERVAL 10
 #define PING_TIMEOUT 5
 
