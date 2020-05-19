@@ -42,6 +42,19 @@ void close_server(){
     }
 }
 
+//===========HELPER FUNCITONS==============//
+
+void close_client(int id){
+    clients[id].registered= 0;
+    clients[id].name = "\0";
+    close(clients[id].socket_fd);
+    clients[id].socket_fd = -1;
+}
+
+void process_msg(int fd){
+
+}
+
 //===========THREAD FUNCTIONS==============//
 void* connection_manager_f(void* args){
 
@@ -102,10 +115,7 @@ void* ping_manager_f(void* args){
         for(int i = 0; i < MAX_CLIENTS; i++){
 
             if(clients[i].registered == 1 && clients[i].active == 0){
-                clients[i].registered= 0;
-                clients[i].name = "\0";
-                close(clients[i].socket_fd);
-                clients[i].socket_fd = -1;
+                close_client(i);
             }
 
         }
@@ -117,7 +127,55 @@ void* ping_manager_f(void* args){
     return 0;
 }
 
-void* game_manager_f(void* args){
+void* client_manager_f(void* args){
+
+    struct pollfd* fds = calloc(MAX_CLIENTS, sizeof(struct pollfd));
+
+    for(int i = 0; i < MAX_CLIENTS; i++){
+        fds[i].events = POLLIN;
+    }
+
+    int check;
+
+    while(1){
+
+        pthread_mutex_lock(&mut_clients);
+
+        for(int i = 0; i < MAX_CLIENTS; i++){
+            fds[i].fd = clients[i].socket_fd;
+        }
+
+        pthread_mutex_unlock(&mut_clients);
+
+        if((check = poll(fds, MAX_CLIENTS, -1)) == -1){
+            error("Client manager fatal error.");
+        }
+
+        for(int i = 0; i < MAX_CLIENTS && check > 0; i++){
+
+            if(fds[i].revents == POLLIN){       //możliwe, że trzeba użyć &
+                pthread_mutex_lock(&mut_clients);
+
+                process_msg(fds[i].fd);
+
+                pthread_mutex_unlock(&mut_clients);
+
+                check--;
+            }
+            
+            if(fds[i].revents == POLLHUP){
+                pthread_mutex_lock(&mut_clients);
+
+                close_client(fds[i].fd);
+
+                pthread_mutex_unlock(&mut_clients);
+
+                check--;
+            }
+
+        }
+    }
+
     return 0;
 }
 
@@ -144,15 +202,15 @@ int main(int argc, char* argv[]){
 
     pthread_t connection_manager;
     pthread_t ping_manager;
-    pthread_t game_manager;
+    pthread_t client_manager;
 
     pthread_create(&connection_manager, NULL, connection_manager_f, NULL);
     pthread_create(&ping_manager, NULL, ping_manager_f, NULL);
-    pthread_create(&game_manager, NULL, game_manager_f, NULL);
+    pthread_create(&client_manager, NULL, client_manager_f, NULL);
 
     pthread_join(connection_manager, NULL);
     pthread_join(ping_manager, NULL);
-    pthread_join(game_manager, NULL);
+    pthread_join(client_manager, NULL);
 
     return 0;
 }

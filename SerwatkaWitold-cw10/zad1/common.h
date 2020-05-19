@@ -19,7 +19,7 @@
 #include <sys/un.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <sys/epoll.h>
+#include <poll.h>
 
 typedef struct client{
     int socket_fd;
