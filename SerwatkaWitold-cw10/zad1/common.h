@@ -5,8 +5,8 @@
 #define NAME_LEN 64
 #define MSG_LEN 256
 
-#define PING_INTERVAL 10
-#define PING_TIMEOUT 5
+#define PING_INTERVAL 60
+#define PING_TIMEOUT 30
 
 #include <stdlib.h>
 #include <stdio.h>

@@ -20,27 +20,40 @@ void setup_server(in_port_t port, char* path, int* socket_fd){
     if((*socket_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
         error("Could not create unix socket.");
     }
+    printf("Socket created.\n");
 
     if(bind(*socket_fd, (struct sockaddr*) &addr, sizeof(struct sockaddr_un)) != 0){
         error("Could not bind socket.");
     }
+    printf("Socket bound.\n");
 
     if(listen(*socket_fd, MAX_CLIENTS) != 0){
         error("Could not start accepting client connection requests.");
     }
-
+    printf("Socket open for accepting connection requests.\n");
+    
 }
 
 void close_server(){
     if(socket_fd != -1){
         if(close(socket_fd) != 0){
             printf("Unable to close socket.\n");
+            printf("%s\n", strerror(errno));
+        }
+        else{
+            printf("Socket closed.\n");
         }
 
         if(unlink(socket_path) != 0){
             printf("Unable to unlink socket.\n");
+            printf("%s\n", strerror(errno));
+        }
+        else{
+            printf("Socket unlinked.\n");
         }
     }
+
+    exit(EXIT_FAILURE);
 }
 
 //===========HELPER FUNCITONS==============//
@@ -55,21 +68,21 @@ void close_client(int id){
 }
 
 void activate_client(int id){
-    clients[i].registered = 1;
+    clients[id].registered = 1;
 }
 
 void process_msg(int id){
     
-    char* buffer;
+    char buffer[MSG_LEN];
 
-    int fd = clients[i].socket_fd;
+    int fd = clients[id].socket_fd;
 
-    if(read(fd, buffer, MSG_SIZE) == -1){
+    if(read(fd, buffer, MSG_LEN) == -1){
         error("Could not read incoming client message.");
     }
 
     if(strcmp(buffer, "pong") == 0){
-        activate_client(id)
+        activate_client(id);
     }
     else{
         write(clients[id].game_partner, buffer, strlen(buffer));
@@ -83,7 +96,7 @@ void start_game(int id){
 
         if(clients[i].registered == 1 && clients[i].active == 0 && i != id){
 
-            struct pollfd* players;
+            struct pollfd* players = calloc(2, sizeof(struct pollfd));
             players[0].fd = clients[i].socket_fd;
             players[0].events = POLLIN;
             players[1].fd = clients[id].socket_fd;
@@ -98,7 +111,7 @@ void start_game(int id){
                 continue;
             }
             
-            char* buffer;
+            char buffer[MSG_LEN];
             if(read(clients[i].socket_fd, buffer, MSG_LEN) < 1){
                 continue;
             }
@@ -107,6 +120,7 @@ void start_game(int id){
                 continue;
             }
 
+            strcpy(buffer, "");
             if(read(clients[id].socket_fd, buffer, MSG_LEN) < 1){
                 continue;
             }
@@ -148,6 +162,7 @@ void* connection_manager_f(void* args){
         socklen_t client_addr_len = sizeof(client_addr);
 
         int i, new_client_fd = accept(socket_fd, (struct sockaddr *) &client_addr, &client_addr_len);
+        printf("Received new connection request.\n");
 
         pthread_mutex_lock(&mut_clients);
 
@@ -155,20 +170,23 @@ void* connection_manager_f(void* args){
 
             if(clients[i].socket_fd == -1){
 
+                printf("Found empty place for player.\n");
+
                 write(new_client_fd, "Client request received.", 25);
 
-                struct pollfd* listener;
+                struct pollfd* listener = calloc(1, sizeof(struct pollfd));
                 listener->fd = new_client_fd;
                 listener->events = POLLIN;
 
                 poll(listener, 1, -1);
 
-                char* new_name;
+                char new_name[MSG_LEN];
                 read(new_client_fd, new_name, NAME_LEN);
 
                 int j;
                 for(j = 0; j < MAX_CLIENTS; j++){
                     if(strcmp(clients[j].name, new_name) == 0){
+                        printf("Could not register player, client with this name already exists.\n");
                         write(new_client_fd, "Client with this name already exists.", 38);
                         break;
                     }
@@ -177,6 +195,7 @@ void* connection_manager_f(void* args){
                 if(j == MAX_CLIENTS){
                     clients[i].socket_fd = new_client_fd;
                     clients[i].registered = 1;
+                    printf("Client registered.\n");
                 }
 
                 non_active_players++;
@@ -304,7 +323,7 @@ int main(int argc, char* argv[]){
 
     for(int i = 0; i < MAX_CLIENTS; i++){
         clients[i].active = 0;
-        bzero((char*) clients[i].name, sizeof(clients[i].name));
+        clients[i].name = "\0";
         clients[i].registered = 0;
         clients[i].socket_fd = -1;
         clients[i].game_partner = -1;

@@ -21,21 +21,24 @@ void open_client(int* fd, char* path, char* name){
     if((*fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
         error("Could not create socket.");
     }   
+    printf("Socket created.\n");
 
     if(connect(*fd, (struct sockaddr*) &addr, sizeof(addr)) != 0){
         error("Could not connect to server.");
     }
+    printf("Connected to server.\n");
 
-    struct pollfd* listener;
+    struct pollfd* listener = calloc(1, sizeof(struct pollfd));
     listener->fd = *fd;
     listener->events = POLLIN;
 
     poll(listener, 1, -1);
-    char* handshake;
+    char handshake[MSG_LEN];
 
     if(read(*fd, handshake, MSG_LEN) < 1){
         error("Could not receive handshake from server.");
     }
+    printf("Received handshake from server.\n");
 
     if(strcmp(handshake, "Client request received.") == 0){
         printf("Server handshake verified.\n");
@@ -48,11 +51,19 @@ void open_client(int* fd, char* path, char* name){
 void close_client(){
     
     if(shutdown(socket_fd, SHUT_RDWR) == -1){
-        printf("Unable to shut down socket.");
+        printf("Unable to shut down socket.\n");
+        printf("%s\n", strerror(errno));
+    }
+    else{
+        printf("Socket shutdown.\n");
     }
 
     if(close(socket_fd) == -1){
-        printf("Could not close socket.");
+        printf("Could not close socket.\n");
+        printf("%s\n", strerror(errno));
+    }
+    else{
+        printf("Socket closed.\n");
     }
 
 }
@@ -67,7 +78,7 @@ void visualise_board(char* board){
 
     for(int i = 0; i < 9; i++){
 
-        printf(" %s ", board[i]);
+        printf(" %d ", board[i]);
         
         if(i % 3 != 2){
             printf("|");
@@ -90,8 +101,8 @@ void play(char* game_state){
 
     printf("It's your turn now, enter the choosen field number.\n");
     
-    char* decision;
-    scanf("%s", &decision);
+    char decision[MSG_LEN];
+    scanf("%s", decision);
 
     game_state[atoi(decision) - 1] = game_symbol;
 
@@ -101,11 +112,11 @@ void play(char* game_state){
 
 void handle_connection(){
 
-    struct pollfd* listener;
+    struct pollfd* listener = calloc(1, sizeof(struct pollfd));
     listener->fd = socket_fd;
     listener->events = POLLIN;
 
-    char* buffer;
+    char buffer[MSG_LEN];
 
     while(1){
 
@@ -122,28 +133,30 @@ void handle_connection(){
             strcmp(buffer, "Client with this name already exists.") == 0
             || strcmp(buffer, "Could not find game partner.") == 0
         ){
-            error(buffer);
+            // error(buffer);
+            printf("%s\n", buffer);
         }
         else if(strcmp(buffer, "Game partner found, are you ready?") == 0){
             printf("%s [y/n]\n", buffer);
             
-            char* answer;
-            scanf("%s", &answer);
+            char answer[MSG_LEN];
+            scanf("%s", answer);
 
             write(socket_fd, answer, strlen(answer));
 
+            strcpy(buffer, "");
             poll(listener, 1, -1);
 
             read(socket_fd, buffer, MSG_LEN);
 
             if(strcmp(buffer, "x") == 0){
-                game_symbol = "x";
-                printf("You begin! Your symbol is: %s\n", game_symbol);
+                game_symbol = 'x';
+                printf("You begin! Your symbol is: x\n");
                 play("123456789");
             }
             else{
-                game_symbol = "o";
-                printf("Waiting for opponent to finish turn. Your symbol is: %s\n", game_symbol);
+                game_symbol = 'o';
+                printf("Waiting for opponent to finish turn. Your symbol is: o\n");
             }
         }
         else{
