@@ -22,10 +22,13 @@
 //settings
 #define MAX_CLIENTS 16
 #define MSG_SIZE 256
+#define PING_INTERVAL 3
+#define PING_TIMEOUT 2
 
 //message types
 #define REJECT 0
 #define ACCEPT 1
+#define PING 2
 
 //struct for client info on server
 typedef struct Client

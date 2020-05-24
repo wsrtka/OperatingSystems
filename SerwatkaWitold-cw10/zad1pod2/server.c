@@ -156,7 +156,7 @@ void* connection_manager_f(void* args){
                 if(write(new_fd, msg, sizeof(msg)) < 1){
                     printf("Could not send response to client.\n %s\n", strerror(errno));
                 }
-                
+
             }
 
         }
@@ -168,7 +168,55 @@ void* connection_manager_f(void* args){
 
 }
 
-void* ping_manager_f(void* args);
+void* ping_manager_f(void* args){
+
+    char* msg = calloc(MSG_SIZE, sizeof(char));
+
+    snprintf(msg, MSG_SIZE, "%d", PING);
+
+    while(1){
+
+        sleep(PING_INTERVAL);
+
+        pthread_mutex_lock(&lock);
+
+        for(int i = 0; i < MAX_CLIENTS; i++){
+
+            if(clients[i].socket_fd != -1){
+
+                if(write(clients[i].socket_fd, msg, MSG_SIZE) < 1){
+                    printf("Could not ping client with id %d\n", i);
+                }
+
+                clients[i].registered = 0;
+
+            }
+
+        }
+
+        pthread_mutex_unlock(&lock);
+
+        sleep(PING_TIMEOUT);
+
+        pthread_mutex_lock(&lock);
+
+        for(int i = 0; i < MAX_CLIENTS; i++){
+
+            if(clients[i].registered == 0){
+
+                strcpy(clients[i].name, "");
+                clients[i].playing = 0;
+                clients[i].socket_fd = -1;
+
+            }
+
+        }
+
+        pthread_mutex_unlock(&lock);
+
+    }
+
+}
 
 
 int main(int argc, char* argv[]){
@@ -187,13 +235,14 @@ int main(int argc, char* argv[]){
     open_server(socket_path);
 
 
-    // pthread_t ping_manager;
+    pthread_t ping_manager;
     pthread_t connection_manager;
 
     pthread_create(&connection_manager, NULL, connection_manager_f, NULL);
-    // pthread_create(ping_manager, NULL, ping_manager_f, NULL);
+    pthread_create(&ping_manager, NULL, ping_manager_f, NULL);
 
     pthread_join(connection_manager, NULL);
+    pthread_join(&ping_manager, NULL);
 
 
     close_server();
