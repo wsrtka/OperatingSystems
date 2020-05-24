@@ -12,6 +12,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include <sys/epoll.h>
 
 //libs for threading
 #include <pthread.h>
@@ -24,6 +25,7 @@
 #define MSG_SIZE 256
 #define PING_INTERVAL 3
 #define PING_TIMEOUT 2
+#define SERVER_RESPONSE_TIME 10
 
 //message types
 #define REJECT 0

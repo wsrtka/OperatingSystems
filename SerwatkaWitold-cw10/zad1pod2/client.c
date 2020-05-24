@@ -3,6 +3,7 @@
 
 
 int socket_fd;
+int epoll_fd = -1;
 
 
 void open_client(char* path, char* name){
@@ -72,10 +73,83 @@ void close_client(){
 
     }
 
+    if(epoll_fd != -1){
+
+        if(close(epoll_fd) == -1){
+            printf("Could not close epoll_fd.\n");
+        }
+        else{
+            printf("Epoll_fd closed.\n");
+        }
+
+    }
+
     printf("Client shutdown.\n");
 
 }
 
+
+void play(char* msg){
+
+    
+
+}
+
+
+void* server_listener_f(void* args){
+
+    char* msg = (char*) calloc(MSG_SIZE, sizeof(char));
+
+    if((epoll_fd = epoll_create1(0)) == -1){
+        error("Could not create server listener.");
+    }
+
+    struct epoll_event event;
+    event.events = EPOLLIN;
+
+    if(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, socket_fd, &event) == -1){
+        error("Could not set up server listener.");
+    }
+
+
+    while(1){
+
+        epoll_wait(epoll_fd, &event, 1, -1);
+
+        if(read(socket_fd, msg, MSG_SIZE) < 1){
+            error("Could not read message from server.\n");
+        }
+
+        if(msg[0] == PING){
+
+            if(write(socket_fd, msg, MSG_SIZE) < 1){
+                error("Could not send server response.");
+            }
+
+        }
+        else if(msg[0] == REJECT){
+
+            raise(SIGINT);
+
+        }
+        else if(strlen(msg) == 9){
+
+            play(msg);
+
+            if(write(socket_fd, msg, MSG_SIZE) < 1){
+                error("Could not send server response.");
+            }
+
+        }
+        else{
+
+            error("Invalid server message.\n");
+
+        }
+
+    }
+
+}
 
 int main(int argc, char* argv[]){
 
@@ -105,7 +179,11 @@ int main(int argc, char* argv[]){
     open_client(server_path, name);
 
 
-    sleep(5);
+    pthread_t server_listener;
+
+    pthread_create(&server_listener, NULL, server_listener_f, NULL);
+
+    pthread_join(server_listener, NULL);
 
 
     close_client();

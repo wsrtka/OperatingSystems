@@ -38,7 +38,7 @@ void open_server(char* path){
     printf("Started listening for client connections.\n");
 
 }
-
+// TODO: close each individual socket and send signal to client
 void close_server(){
 
     if(socket_fd != -1){
@@ -189,6 +189,7 @@ void* ping_manager_f(void* args){
                 }
 
                 clients[i].registered = 0;
+                printf("Debug: pinging client with id %d\n", i);
 
             }
 
@@ -203,6 +204,7 @@ void* ping_manager_f(void* args){
         for(int i = 0; i < MAX_CLIENTS; i++){
 
             if(clients[i].registered == 0){
+                printf("Debug: disconnected client with id %d\n", i);
 
                 strcpy(clients[i].name, "");
                 clients[i].playing = 0;
@@ -242,7 +244,7 @@ int main(int argc, char* argv[]){
     pthread_create(&ping_manager, NULL, ping_manager_f, NULL);
 
     pthread_join(connection_manager, NULL);
-    pthread_join(&ping_manager, NULL);
+    pthread_join(ping_manager, NULL);
 
 
     close_server();
