@@ -12,7 +12,7 @@ void open_server(char* path){
     clients = (Client*) calloc(MAX_CLIENTS, sizeof(Client));
 
     for(int i = 0; i < MAX_CLIENTS; i++){
-        clients[i].name = '\0';
+        clients[i].name = (char*) calloc(MSG_SIZE, sizeof(char));
         clients[i].playing = 0;
         clients[i].registered = 0;
         clients[i].socket_fd = -1;
@@ -67,7 +67,7 @@ void close_server(){
 void* connection_manager_f(void* args){
 
     int i, j, new_fd;
-    char msg[MSG_SIZE] = '\0';
+    char* msg = (char*) calloc(MSG_SIZE, sizeof(char));
 
     while(1){
 
@@ -95,7 +95,7 @@ void* connection_manager_f(void* args){
 
             printf("No slot found.\n");
 
-            sprintf(msg, "%d", REJECT);
+            snprintf(msg, MSG_SIZE, "%d", REJECT);
 
             if(write(new_fd, msg, sizeof(msg)) < 1){
                 printf("Could not send response to client.\n %s\n", strerror(errno));
@@ -104,11 +104,15 @@ void* connection_manager_f(void* args){
         }
         else{
 
-            sprintf(msg, "%d", ACCEPT);
+            snprintf(msg, MSG_SIZE, "%d", ACCEPT);
+        
 
             if(write(new_fd, msg, sizeof(msg)) < 1){
                 printf("Could not send response to client.\n %s\n", strerror(errno));
-            } 
+            }
+
+            free(msg);
+            char* msg = (char*) calloc(MSG_SIZE, sizeof(char));
 
             if(read(new_fd, msg, MSG_SIZE) < 1){
                 printf("Could not read client name.\n %s\n", strerror(errno));
@@ -120,7 +124,7 @@ void* connection_manager_f(void* args){
                 if(strcmp(clients[j].name, msg) == 0){
 
                     printf("Client with this name already exists.\n");
-                    sprintf(msg, "%d", REJECT);
+                    snprintf(msg, MSG_SIZE, "%d", REJECT);
                     if(write(new_fd, msg, sizeof(msg)) < 1){
                         printf("Could not send response to client.\n");
                     }
@@ -133,23 +137,26 @@ void* connection_manager_f(void* args){
 
             if(j == MAX_CLIENTS){
 
+
                 strcpy(clients[i].name, msg);
                 clients[i].registered = 1;
-                
-                sprintf(msg, "%d", ACCEPT);
+
+                snprintf(msg, MSG_SIZE, "%d", ACCEPT);
 
                 if(write(new_fd, msg, sizeof(msg)) < 1){
                     printf("Could not send response to client.\n %s\n", strerror(errno));
                 }
+
 
             }
             else{
 
-                sprintf(msg, "%d", REJECT);
+                snprintf(msg, MSG_SIZE, "%d", REJECT);
 
                 if(write(new_fd, msg, sizeof(msg)) < 1){
                     printf("Could not send response to client.\n %s\n", strerror(errno));
                 }
+                
             }
 
         }

@@ -34,7 +34,7 @@ void open_client(char* path, char* name){
     }
 
 
-    sprintf(msg, "%d%s", USRNAME, name);
+    strcpy(msg, name);
 
     if(write(socket_fd, msg, sizeof(msg)) < 1){
         error("Could not send client name.");
@@ -89,9 +89,9 @@ int main(int argc, char* argv[]){
 
     if(argc == 4){
 
-        char* name = argv[1];
-        char* connection_type = argv[2];
-        char* server_path = argv[3];
+        name = argv[1];
+        connection_type = argv[2];
+        server_path = argv[3];
         
     }
     else if(argc == 5){

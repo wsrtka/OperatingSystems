@@ -24,9 +24,8 @@
 #define MSG_SIZE 256
 
 //message types
-#define REJECT '0'
-#define ACCEPT '1'
-#define USRNAME '2'
+#define REJECT 0
+#define ACCEPT 1
 
 //struct for client info on server
 typedef struct Client
