@@ -59,15 +59,6 @@ void close_server(){
 
     }
 
-    if(epoll_fd != -1){
-        if(close(epoll_fd) == -1){
-            printf("Could not close epoll.\n %s\n", strerror(errno));
-        }
-        else{
-            printf("Epoll closed.\n");
-        }
-    }
-
     printf("Server shutdown.\n");
 
 }
