@@ -11,6 +11,7 @@
 //libs needed for socket operations
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <unistd.h>
 
 //libs for threading
 #include <pthread.h>
@@ -20,6 +21,18 @@
 
 //settings
 #define MAX_CLIENTS 16
+#define MSG_SIZE 256
+
+//struct for client info on server
+typedef struct Client
+{
+    int socket_fd;
+    int registered;
+    int playing;
+    char* name;
+} Client;
+
+
 
 void error(char* msg){
     printf("%s\n", msg);

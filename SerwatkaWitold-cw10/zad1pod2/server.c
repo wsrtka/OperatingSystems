@@ -3,9 +3,20 @@
 
 
 int socket_fd;
+Client* clients;
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 
 void open_server(char* path){
+
+    clients = (Client*) calloc(MAX_CLIENTS, sizeof(Client));
+
+    for(int i = 0; i < MAX_CLIENTS; i++){
+        clients[i].name = '\0';
+        clients[i].playing = 0;
+        clients[i].registered = 0;
+        clients[i].socket_fd = -1;
+    }
 
     struct sockaddr_un addr;
     addr.sun_family = AF_UNIX;
@@ -48,12 +59,62 @@ void close_server(){
 
     }
 
-    printf("Server shutdown.\n");
+    if(epoll_fd != -1){
+        if(close(epoll_fd) == -1){
+            printf("Could not close epoll.\n %s\n", strerror(errno));
+        }
+        else{
+            printf("Epoll closed.\n");
+        }
+    }
 
-    exit(EXIT_SUCCESS);
+    printf("Server shutdown.\n");
 
 }
 
+
+void* connection_manager_f(void* args){
+
+    int i, new_fd;
+
+    while(1){
+
+        new_fd = accept(socket_fd, NULL, NULL);
+
+        printf("New connection request.\n");
+
+        pthread_mutex_lock(&lock);
+
+        for(i = 0; i < MAX_CLIENTS; i++){
+
+            if(clients[i].socket_fd == -1){
+
+                printf("Found free client slot.\n");
+                clients[i].socket_fd = new_fd;
+                break;
+
+            }
+
+        }
+
+        if(i == MAX_CLIENTS){
+
+            printf("No slot found.\n");
+
+            //return message to client.        
+    
+        }
+        else{
+
+            //send success message to client and get his name
+
+        }
+
+        pthread_mutex_unlock(&lock);
+
+    }
+
+}
 
 void* ping_manager_f(void* args);
 
@@ -74,9 +135,13 @@ int main(int argc, char* argv[]){
     open_server(socket_path);
 
 
-    pthread_t ping_manager;
+    // pthread_t ping_manager;
+    pthread_t connection_manager;
 
-    pthread_create(ping_manager, NULL, ping_manager_f, NULL);
+    pthread_create(&connection_manager, NULL, connection_manager_f, NULL);
+    // pthread_create(ping_manager, NULL, ping_manager_f, NULL);
+
+    pthread_join(connection_manager, NULL);
 
 
     close_server();
