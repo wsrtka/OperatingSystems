@@ -50,6 +50,7 @@ void close_server(){
         }
         else{
             printf("Socket unlinked.\n");
+     
         }
     }
 
@@ -162,7 +163,7 @@ void* connection_manager_f(void* args){
         socklen_t client_addr_len = sizeof(client_addr);
 
         int i, new_client_fd = accept(socket_fd, (struct sockaddr *) &client_addr, &client_addr_len);
-        printf("Received new connection request.\n");
+        printf("Received new connection request. %d\n", new_client_fd);
 
         pthread_mutex_lock(&mut_clients);
 
@@ -174,23 +175,26 @@ void* connection_manager_f(void* args){
 
                 write(new_client_fd, "Client request received.", 25);
 
-                struct pollfd* listener = calloc(1, sizeof(struct pollfd));
-                listener->fd = new_client_fd;
-                listener->events = POLLIN;
+                struct pollfd listener[1];
+                listener[0].fd = new_client_fd;
+                listener[0].events = POLLIN;
 
                 poll(listener, 1, -1);
 
                 char new_name[MSG_LEN];
-                read(new_client_fd, new_name, NAME_LEN);
+                int count = read(new_client_fd, new_name, sizeof(new_name));
 
                 int j;
                 for(j = 0; j < MAX_CLIENTS; j++){
                     if(strcmp(clients[j].name, new_name) == 0){
                         printf("Could not register player, client with this name already exists.\n");
                         write(new_client_fd, "Client with this name already exists.", 38);
+                        new_name[0] = '\0';
                         break;
                     }
                 }
+
+                new_name[0] = '\0';
 
                 if(j == MAX_CLIENTS){
                     clients[i].socket_fd = new_client_fd;
@@ -228,7 +232,7 @@ void* ping_manager_f(void* args){
         for(int i = 0; i < MAX_CLIENTS; i++){
 
             if(clients[i].registered == 1){
-                clients[i].active = 0;
+                clients[i].registered = 0;
 
                 write(clients[i].socket_fd, "ping", 4);
             }
@@ -323,7 +327,7 @@ int main(int argc, char* argv[]){
 
     for(int i = 0; i < MAX_CLIENTS; i++){
         clients[i].active = 0;
-        clients[i].name = "\0";
+        clients[i].name = '\0';
         clients[i].registered = 0;
         clients[i].socket_fd = -1;
         clients[i].game_partner = -1;

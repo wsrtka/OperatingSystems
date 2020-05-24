@@ -86,7 +86,7 @@ void visualise_board(char* board){
         else{
             printf("\n");
 
-            if(i != 9){
+            if(i != 8){
                 printf("---+---+---\n");;
             }
         }
@@ -112,18 +112,25 @@ void play(char* game_state){
 
 void handle_connection(){
 
-    struct pollfd* listener = calloc(1, sizeof(struct pollfd));
-    listener->fd = socket_fd;
-    listener->events = POLLIN;
+    struct pollfd listener[1];
+    listener[0].fd = socket_fd;
+    listener[0].events = POLLIN;
 
     char buffer[MSG_LEN];
 
     while(1){
 
+        buffer[0] = '\0';
+
         poll(listener, 1, -1);
 
-        if(read(socket_fd, buffer, MSG_LEN) == -1){
+        if(read(socket_fd, buffer, sizeof(buffer)) == -1){
+            printf("%d", listener[0].revents & POLLIN);
             error("Could not read message from server.");
+        }
+
+        if(strcmp(buffer, "") != 0){
+            printf("received message: %s\n", buffer);
         }
 
         if(strcmp(buffer, "ping") == 0){
@@ -143,8 +150,10 @@ void handle_connection(){
             scanf("%s", answer);
 
             write(socket_fd, answer, strlen(answer));
+            
+            answer[0] = '\0';
+            buffer[0] = '\0';
 
-            strcpy(buffer, "");
             poll(listener, 1, -1);
 
             read(socket_fd, buffer, MSG_LEN);
@@ -159,7 +168,7 @@ void handle_connection(){
                 printf("Waiting for opponent to finish turn. Your symbol is: o\n");
             }
         }
-        else{
+        else if (strlen(buffer) == 9){
             play(buffer);
             
             write(socket_fd, buffer, sizeof(buffer));
