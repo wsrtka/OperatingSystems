@@ -1,10 +1,32 @@
+
 #include "common.h"
 
 
-//global args
+int socket_fd;
 
 
-void open_server();
+void open_server(char* path){
+
+    struct sockaddr_un addr;
+    addr.sun_family = AF_UNIX;
+    strcpy(addr.sun_path, path);
+
+    if((socket_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
+        error("Could not create socket.");
+    }
+    printf("Socket succsessfully created.\n");
+
+    if(bind(socket_fd, (struct sockaddr*) &addr, sizeof(addr)) == -1){
+        error("Could not bind socket.");
+    }
+    printf("Socket bound.\n");
+
+    if(listen(socket_fd, MAX_CLIENTS) == -1){
+        error("Could not start listening for connections.");
+    }
+    printf("Started listening for client connections.\n");
+
+}
 
 void close_server();
 
@@ -22,10 +44,10 @@ int main(int argc, char* argv[]){
         error("Invalid number of arguments.");
     }
 
-    //get command line args
+    char* socket_path = argv[2];
 
 
-    open_server();
+    open_server(socket_path);
 
 
     pthread_t ping_manager;
