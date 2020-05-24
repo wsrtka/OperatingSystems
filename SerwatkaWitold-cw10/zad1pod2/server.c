@@ -28,7 +28,31 @@ void open_server(char* path){
 
 }
 
-void close_server();
+void close_server(){
+
+    if(socket_fd != -1){
+
+        if(shutdown(socket_fd, SHUT_RDWR) == -1){
+            printf("Could not shutdown socket.\n %s\n", strerror(errno));
+        }
+        else{
+            printf("Socket shutdown.\n");
+        }
+
+        if(close(socket_fd) == -1){
+            printf("Could not close socket.\n %s\n", strerror(errno));
+        }
+        else{
+            printf("Socket closed.\n");
+        }
+
+    }
+
+    printf("Server shutdown.\n");
+
+    exit(EXIT_SUCCESS);
+
+}
 
 
 void* ping_manager_f(void* args);
