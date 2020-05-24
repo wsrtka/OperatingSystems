@@ -23,6 +23,11 @@
 #define MAX_CLIENTS 16
 #define MSG_SIZE 256
 
+//message types
+#define REJECT '0'
+#define ACCEPT '1'
+#define USRNAME '2'
+
 //struct for client info on server
 typedef struct Client
 {

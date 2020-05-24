@@ -66,15 +66,17 @@ void close_server(){
 
 void* connection_manager_f(void* args){
 
-    int i, new_fd;
+    int i, j, new_fd;
+    char msg[MSG_SIZE] = '\0';
 
     while(1){
 
         new_fd = accept(socket_fd, NULL, NULL);
 
-        printf("New connection request.\n");
+        printf("New connection request received.\n");
 
         pthread_mutex_lock(&lock);
+
 
         for(i = 0; i < MAX_CLIENTS; i++){
 
@@ -88,18 +90,70 @@ void* connection_manager_f(void* args){
 
         }
 
+
         if(i == MAX_CLIENTS){
 
             printf("No slot found.\n");
 
-            //return message to client.        
+            sprintf(msg, "%d", REJECT);
+
+            if(write(new_fd, msg, sizeof(msg)) < 1){
+                printf("Could not send response to client.\n %s\n", strerror(errno));
+            }      
     
         }
         else{
 
-            //send success message to client and get his name
+            sprintf(msg, "%d", ACCEPT);
+
+            if(write(new_fd, msg, sizeof(msg)) < 1){
+                printf("Could not send response to client.\n %s\n", strerror(errno));
+            } 
+
+            if(read(new_fd, msg, MSG_SIZE) < 1){
+                printf("Could not read client name.\n %s\n", strerror(errno));
+            }
+
+            
+            for(j = 0; j < MAX_CLIENTS; j++){
+
+                if(strcmp(clients[j].name, msg) == 0){
+
+                    printf("Client with this name already exists.\n");
+                    sprintf(msg, "%d", REJECT);
+                    if(write(new_fd, msg, sizeof(msg)) < 1){
+                        printf("Could not send response to client.\n");
+                    }
+                    break;
+
+                }
+
+            }
+
+
+            if(j == MAX_CLIENTS){
+
+                strcpy(clients[i].name, msg);
+                clients[i].registered = 1;
+                
+                sprintf(msg, "%d", ACCEPT);
+
+                if(write(new_fd, msg, sizeof(msg)) < 1){
+                    printf("Could not send response to client.\n %s\n", strerror(errno));
+                }
+
+            }
+            else{
+
+                sprintf(msg, "%d", REJECT);
+
+                if(write(new_fd, msg, sizeof(msg)) < 1){
+                    printf("Could not send response to client.\n %s\n", strerror(errno));
+                }
+            }
 
         }
+
 
         pthread_mutex_unlock(&lock);
 
