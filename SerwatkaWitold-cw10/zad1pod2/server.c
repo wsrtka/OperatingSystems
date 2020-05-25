@@ -10,11 +10,13 @@ pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 void open_server(char* path){
 
+    srand(time(NULL));
+
     clients = (Client*) calloc(MAX_CLIENTS, sizeof(Client));
 
     for(int i = 0; i < MAX_CLIENTS; i++){
         clients[i].name = (char*) calloc(MSG_SIZE, sizeof(char));
-        clients[i].playing = 0;
+        clients[i].playing = -1;
         clients[i].registered = 0;
         clients[i].socket_fd = -1;
     }
@@ -146,6 +148,33 @@ void* connection_manager_f(void* args){
 
                 if(write(new_fd, msg, sizeof(msg)) < 1){
                     printf("Could not send response to client.\n %s\n", strerror(errno));
+                }
+
+                
+                for(j = 0; j < MAX_CLIENTS; j++){
+
+                    if(j != i && clients[j].playing == -1 && clients[j].socket_fd != -1){
+
+                        msg = "123456789";
+
+                        clients[i].playing = clients[j].socket_fd;
+                        clients[j].playing = clients[i].socket_fd;
+
+                        if(rand() % 2 == 0){
+                            
+                            write(clients[i].socket_fd, msg, MSG_SIZE);
+
+                        }
+                        else{
+
+                            write(clients[j].socket_fd, msg, MSG_SIZE);
+
+                        }
+
+                        break;
+
+                    }
+
                 }
 
 

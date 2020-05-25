@@ -7,6 +7,7 @@
 #include <string.h>
 #include <errno.h>
 #include <signal.h>
+#include <time.h>
 
 //libs needed for socket operations
 #include <sys/socket.h>
@@ -26,7 +27,6 @@
 #define PING_INTERVAL 10
 #define PING_TIMEOUT 10
 #define SERVER_WAIT 5000
-
 
 //message types
 #define REJECT 0
