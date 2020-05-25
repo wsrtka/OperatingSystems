@@ -23,9 +23,10 @@
 //settings
 #define MAX_CLIENTS 16
 #define MSG_SIZE 256
-#define PING_INTERVAL 3
-#define PING_TIMEOUT 2
-#define SERVER_RESPONSE_TIME 10
+#define PING_INTERVAL 10
+#define PING_TIMEOUT 10
+#define SERVER_WAIT 5000
+
 
 //message types
 #define REJECT 0

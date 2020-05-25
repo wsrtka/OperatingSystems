@@ -184,6 +184,7 @@ void* ping_manager_f(void* args){
         for(int i = 0; i < MAX_CLIENTS; i++){
 
             if(clients[i].socket_fd != -1){
+                printf("debug: sent ping to client no. %d\n", i);
 
                 if(write(clients[i].socket_fd, msg, MSG_SIZE) < 1){
                     printf("Could not ping client with id %d\n", i);
@@ -203,12 +204,14 @@ void* ping_manager_f(void* args){
 
         for(int i = 0; i < MAX_CLIENTS; i++){
 
-            if(clients[i].registered == 0){
+            if(clients[i].registered == 0 && clients[i].socket_fd != -1){
 
                 strcpy(clients[i].name, "");
                 clients[i].playing = 0;
                 epoll_ctl(epoll_fd, EPOLL_CTL_DEL, clients[i].socket_fd, NULL);
                 clients[i].socket_fd = -1;
+
+                printf("debug: disconnected client no. %d\n", i);
 
             }
 
@@ -250,12 +253,15 @@ void* comm_manager_f(void* args){
 
         pthread_mutex_unlock(&lock);
 
+        printf("debug: %d\n", 0);
+        count = epoll_wait(epoll_fd, events, MAX_CLIENTS, SERVER_WAIT);
+        printf("debug: %d\n", count);
 
-        count = epoll_wait(epoll_fd, events, MAX_CLIENTS, -1);
+        pthread_mutex_lock(&lock);
 
         for(int i = 0; i < MAX_CLIENTS && count > 0; i++){
 
-            if(events[i].events == EPOLLIN){
+            if(!(events[i].events ^ EPOLLIN)){
 
                 if(read(clients[i].socket_fd, msg, MSG_SIZE) < 1){
                     printf("Could not read message from client no. %d.\n", i);
@@ -263,6 +269,8 @@ void* comm_manager_f(void* args){
                 }
 
                 if(atoi(msg) == PING){
+
+                    printf("Received pong message from client no %d.\n", i);
 
                     clients[i].registered = 1;
 
