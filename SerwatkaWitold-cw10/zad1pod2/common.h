@@ -32,6 +32,7 @@
 #define REJECT 0
 #define ACCEPT 1
 #define PING 2
+#define SYMBOLSET 3
 
 //struct for client info on server
 typedef struct Client

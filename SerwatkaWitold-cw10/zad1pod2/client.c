@@ -4,6 +4,7 @@
 
 int socket_fd;
 int epoll_fd = -1;
+char* game_symbol;
 
 
 void open_client(char* path, char* name){
@@ -134,6 +135,11 @@ void* server_listener_f(void* args){
         else if(atoi(msg) == REJECT){
 
             raise(SIGINT);
+
+        }
+        else if(atoi(msg) == SYMBOLSET){
+
+            game_symbol = "o";
 
         }
         else if(strlen(msg) == 9){

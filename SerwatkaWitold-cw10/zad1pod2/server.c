@@ -163,11 +163,15 @@ void* connection_manager_f(void* args){
                         if(rand() % 2 == 0){
                             
                             write(clients[i].socket_fd, msg, MSG_SIZE);
+                            snprintf(msg, MSG_SIZE, "%d", SYMBOLSET);
+                            write(clients[j].socket_fd, msg, MSG_SIZE);
 
                         }
                         else{
 
                             write(clients[j].socket_fd, msg, MSG_SIZE);
+                            snprintf(msg, MSG_SIZE, "%d", SYMBOLSET);
+                            write(clients[i].socket_fd, msg, MSG_SIZE);
 
                         }
 
