@@ -20,6 +20,8 @@
 
 //constants definitions
 #define UNIX_PATH_MAX 108
+#define LOSER 0
+#define WINNTER 1
 
 //settings
 #define MAX_CLIENTS 16
