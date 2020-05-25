@@ -2,7 +2,8 @@
 #include "common.h"
 
 
-int socket_fd;
+int socket_fd = -1;
+int epoll_fd = -1;
 Client* clients;
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -189,7 +190,6 @@ void* ping_manager_f(void* args){
                 }
 
                 clients[i].registered = 0;
-                printf("Debug: pinging client with id %d\n", i);
 
             }
 
@@ -204,15 +204,93 @@ void* ping_manager_f(void* args){
         for(int i = 0; i < MAX_CLIENTS; i++){
 
             if(clients[i].registered == 0){
-                printf("Debug: disconnected client with id %d\n", i);
 
                 strcpy(clients[i].name, "");
                 clients[i].playing = 0;
+                epoll_ctl(epoll_fd, EPOLL_CTL_DEL, clients[i].socket_fd, NULL);
                 clients[i].socket_fd = -1;
 
             }
 
         }
+
+        pthread_mutex_unlock(&lock);
+
+    }
+
+}
+
+void* comm_manager_f(void* args){
+
+    int count;
+    char* msg = (char*) calloc(MAX_CLIENTS, sizeof(char));
+
+    epoll_fd = epoll_create1(0);
+
+    struct epoll_event event;
+    event.events = EPOLLIN;
+
+    struct epoll_event* events = (struct epoll_event*) calloc(MAX_CLIENTS, sizeof(struct epoll_event));
+
+
+    while(1){
+
+        pthread_mutex_lock(&lock);
+
+        for(int i = 0; i < MAX_CLIENTS; i++){
+
+            if(clients[i].socket_fd != -1){
+                epoll_ctl(epoll_fd, EPOLL_CTL_ADD, clients[i].socket_fd, &event);
+            }
+
+            events[i].events = 0;
+
+        }
+
+
+        pthread_mutex_unlock(&lock);
+
+
+        count = epoll_wait(epoll_fd, events, MAX_CLIENTS, -1);
+
+        for(int i = 0; i < MAX_CLIENTS && count > 0; i++){
+
+            if(events[i].events == EPOLLIN){
+
+                if(read(clients[i].socket_fd, msg, MSG_SIZE) < 1){
+                    printf("Could not read message from client no. %d.\n", i);
+                    continue;
+                }
+
+                if(atoi(msg) == PING){
+
+                    clients[i].registered = 1;
+
+                }
+                else if(strlen(msg) == 9){
+
+                    if(write(clients[clients[i].playing].socket_fd, msg, MSG_SIZE) < 1){
+                        
+                        printf("Could not send game state from player no. %d to player no. %d.\n", i, clients[i].playing);
+                        
+                        snprintf(msg, MSG_SIZE, "%d", REJECT);
+
+                        write(clients[i].socket_fd, msg, MSG_SIZE);
+                        write(clients[clients[i].playing].socket_fd, msg, MSG_SIZE);
+                        
+                    }
+
+                }
+                else{
+
+                    printf("Received invalid message from client no. %d.\n", i);
+
+                }
+
+            }
+
+        }
+
 
         pthread_mutex_unlock(&lock);
 
@@ -239,12 +317,15 @@ int main(int argc, char* argv[]){
 
     pthread_t ping_manager;
     pthread_t connection_manager;
+    pthread_t comm_manager;
 
     pthread_create(&connection_manager, NULL, connection_manager_f, NULL);
     pthread_create(&ping_manager, NULL, ping_manager_f, NULL);
+    pthread_create(&comm_manager, NULL, comm_manager_f, NULL);
 
     pthread_join(connection_manager, NULL);
     pthread_join(ping_manager, NULL);
+    pthread_join(comm_manager, NULL);
 
 
     close_server();

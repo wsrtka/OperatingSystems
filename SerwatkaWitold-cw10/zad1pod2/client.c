@@ -30,7 +30,7 @@ void open_client(char* path, char* name){
         error("Could not read server response.");
     }
     
-    if(msg[0] == REJECT){
+    if(atoi(msg) == REJECT){
         error("Server full.");
     }
 
@@ -46,7 +46,7 @@ void open_client(char* path, char* name){
         error("Could not read server response.");
     }
 
-    if(msg[0] == REJECT){
+    if(atoi(msg) == REJECT){
         error("Client with choosen name already exists.");
     }
     printf("Received name confirmation from server.\n");
@@ -86,15 +86,16 @@ void close_client(){
 
     printf("Client shutdown.\n");
 
+    exit(EXIT_SUCCESS);
+
 }
 
 
 void play(char* msg){
 
-    
+
 
 }
-
 
 void* server_listener_f(void* args){
 
@@ -120,14 +121,16 @@ void* server_listener_f(void* args){
             error("Could not read message from server.\n");
         }
 
-        if(msg[0] == PING){
+        if(atoi(msg) == PING){
+
+            printf("debug: received ping msg from server.\n");
 
             if(write(socket_fd, msg, MSG_SIZE) < 1){
                 error("Could not send server response.");
             }
 
         }
-        else if(msg[0] == REJECT){
+        else if(atoi(msg) == REJECT){
 
             raise(SIGINT);
 
