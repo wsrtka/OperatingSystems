@@ -1,353 +1,578 @@
+
 #include "common.h"
 
-in_port_t inet_port;
-char* socket_path;
-int socket_fd;
 
-client clients[MAX_CLIENTS];
+int socket_fd = -1;
+int epoll_fd = -1;
+int socket_inet_fd = -1;
+Client* clients;
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
-pthread_mutex_t mut_clients = PTHREAD_MUTEX_INITIALIZER;
 
-int non_active_players = 0;
+void open_server(char* path, in_port_t port){
 
-//===========SERVER FUNCTIONS=============//
-void setup_server(in_port_t port, char* path, int* socket_fd){
+    srand(time(NULL));
+
+    clients = (Client*) calloc(MAX_CLIENTS, sizeof(Client));
+
+    for(int i = 0; i < MAX_CLIENTS; i++){
+        clients[i].name = (char*) calloc(MSG_SIZE, sizeof(char));
+        clients[i].playing = -1;
+        clients[i].registered = 0;
+        clients[i].socket_fd = -1;
+    }
 
     struct sockaddr_un addr;
-    strcpy(addr.sun_path, path);
     addr.sun_family = AF_UNIX;
+    strcpy(addr.sun_path, path);
 
-    if((*socket_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
-        error("Could not create unix socket.");
+    if((socket_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
+        error("Could not create socket.");
     }
-    printf("Socket created.\n");
+    printf("Socket succsessfully created.\n");
 
-    if(bind(*socket_fd, (struct sockaddr*) &addr, sizeof(struct sockaddr_un)) != 0){
+    if(bind(socket_fd, (struct sockaddr*) &addr, sizeof(addr)) == -1){
         error("Could not bind socket.");
     }
     printf("Socket bound.\n");
 
-    if(listen(*socket_fd, MAX_CLIENTS) != 0){
-        error("Could not start accepting client connection requests.");
+    if(listen(socket_fd, MAX_CLIENTS) == -1){
+        error("Could not start listening for connections.");
     }
-    printf("Socket open for accepting connection requests.\n");
-    
-}
+    printf("Started listening for client connections.\n");
 
+
+    struct hostent * host_entry = gethostbyname("localhost");
+    struct in_addr host_address = *(struct in_addr*) host_entry->h_addr;
+
+    struct sockaddr_in inet_addr;
+    inet_addr.sin_family = AF_INET;
+    inet_addr.sin_addr.s_addr = host_address.s_addr;
+    inet_addr.sin_port = htons(port);
+
+    if((socket_inet_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1){
+        error("Could not create inet socket.");
+    }
+    printf("Inet socket created.\n");
+
+    if(bind(socket_fd, (struct sockaddr*) &inet_addr, sizeof(inet_addr)) == -1){
+        error("Could not bind inet socket.");
+    }
+    printf("Inet socket bound.\n");
+
+    if(listen(socket_fd, MAX_CLIENTS) == -1){
+        error("Could not start listening for connections.");
+    }
+    printf("Started listening for inet client connections.\n");
+
+}
+// TODO: close each individual socket and send signal to client
 void close_server(){
+
     if(socket_fd != -1){
-        if(close(socket_fd) != 0){
-            printf("Unable to close socket.\n");
-            printf("%s\n", strerror(errno));
+
+        if(shutdown(socket_fd, SHUT_RDWR) == -1){
+            printf("Could not shutdown socket.\n %s\n", strerror(errno));
+        }
+        else{
+            printf("Socket shutdown.\n");
+        }
+
+        if(close(socket_fd) == -1){
+            printf("Could not close socket.\n %s\n", strerror(errno));
         }
         else{
             printf("Socket closed.\n");
         }
 
-        if(unlink(socket_path) != 0){
-            printf("Unable to unlink socket.\n");
-            printf("%s\n", strerror(errno));
+    }
+
+    if(socket_inet_fd != -1){
+
+        if(shutdown(socket_inet_fd, SHUT_RDWR) == -1){
+            printf("Could not shutdown socket.\n %s\n", strerror(errno));
         }
         else{
-            printf("Socket unlinked.\n");
-     
+            printf("Socket shutdown.\n");
         }
-    }
 
-    exit(EXIT_FAILURE);
-}
-
-//===========HELPER FUNCITONS==============//
-
-void close_client(int id){
-    clients[id].registered= 0;
-    clients[id].name = "\0";
-    close(clients[id].socket_fd);
-    clients[id].socket_fd = -1;
-
-    non_active_players--;
-}
-
-void activate_client(int id){
-    clients[id].registered = 1;
-}
-
-void process_msg(int id){
-    
-    char buffer[MSG_LEN];
-
-    int fd = clients[id].socket_fd;
-
-    if(read(fd, buffer, MSG_LEN) == -1){
-        error("Could not read incoming client message.");
-    }
-
-    if(strcmp(buffer, "pong") == 0){
-        activate_client(id);
-    }
-    else{
-        write(clients[id].game_partner, buffer, strlen(buffer));
-    }
-
-}
-
-void start_game(int id){
-
-    for(int i = 0; i < MAX_CLIENTS; i++){
-
-        if(clients[i].registered == 1 && clients[i].active == 0 && i != id){
-
-            struct pollfd* players = calloc(2, sizeof(struct pollfd));
-            players[0].fd = clients[i].socket_fd;
-            players[0].events = POLLIN;
-            players[1].fd = clients[id].socket_fd;
-            players[1].events = POLLIN;
-
-            write(clients[i].socket_fd, "Game partner found, are you ready?", 34);
-            write(clients[id].socket_fd, "Game partner found, are you ready?", 34);
-
-            int res = poll(players, 2, 15);
-
-            if(res != 2){
-                continue;
-            }
-            
-            char buffer[MSG_LEN];
-            if(read(clients[i].socket_fd, buffer, MSG_LEN) < 1){
-                continue;
-            }
-
-            if(strcmp(buffer, "y") != 0){
-                continue;
-            }
-
-            strcpy(buffer, "");
-            if(read(clients[id].socket_fd, buffer, MSG_LEN) < 1){
-                continue;
-            }
-
-            if(strcmp(buffer, "y") != 0){
-                continue;
-            }
-
-            clients[i].game_partner = id;
-            clients[id].game_partner = i;
-
-            if(rand() % 2 == 0){
-                write(clients[i].socket_fd, "x", 1);
-                write(clients[id].socket_fd, "o", 1);
-
-                return;
-            }
-            else{
-                write(clients[id].socket_fd, "x", 1);
-                write(clients[i].socket_fd, "o", 1);
-
-                return;
-            }
-
+        if(close(socket_inet_fd) == -1){
+            printf("Could not close socket.\n %s\n", strerror(errno));
+        }
+        else{
+            printf("Socket closed.\n");
         }
 
     }
 
-    write(clients[id].socket_fd, "Could not find game partner.", 29);
+
+    printf("Server shutdown.\n");
 
 }
 
-//===========THREAD FUNCTIONS==============//
+
 void* connection_manager_f(void* args){
+
+    int i, j, new_fd;
+    char msg[MAX_CLIENTS];
 
     while(1){
 
-        struct sockaddr_un client_addr;
-        socklen_t client_addr_len = sizeof(client_addr);
+        new_fd = accept(socket_fd, NULL, NULL);
 
-        int i, new_client_fd = accept(socket_fd, (struct sockaddr *) &client_addr, &client_addr_len);
-        printf("Received new connection request. %d\n", new_client_fd);
+        printf("New connection request received.\n");
 
-        pthread_mutex_lock(&mut_clients);
+        pthread_mutex_lock(&lock);
+
 
         for(i = 0; i < MAX_CLIENTS; i++){
 
             if(clients[i].socket_fd == -1){
 
-                printf("Found empty place for player.\n");
+                printf("Found free client slot.\n");
+                clients[i].socket_fd = new_fd;
+                break;
 
-                write(new_client_fd, "Client request received.", 25);
-
-                struct pollfd listener[1];
-                listener[0].fd = new_client_fd;
-                listener[0].events = POLLIN;
-
-                poll(listener, 1, -1);
-
-                char new_name[MSG_LEN];
-                int count = read(new_client_fd, new_name, sizeof(new_name));
-
-                int j;
-                for(j = 0; j < MAX_CLIENTS; j++){
-                    if(strcmp(clients[j].name, new_name) == 0){
-                        printf("Could not register player, client with this name already exists.\n");
-                        write(new_client_fd, "Client with this name already exists.", 38);
-                        new_name[0] = '\0';
-                        break;
-                    }
-                }
-
-                new_name[0] = '\0';
-
-                if(j == MAX_CLIENTS){
-                    clients[i].socket_fd = new_client_fd;
-                    clients[i].registered = 1;
-                    printf("Client registered.\n");
-                }
-
-                non_active_players++;
-
-                start_game(i);
-                
             }
 
         }
 
+
         if(i == MAX_CLIENTS){
-            printf("Could not register new client, already reached max client number.\n");
+
+            printf("No slot found.\n");
+
+            snprintf(msg, MSG_SIZE, "%d", REJECT);
+
+            if(write(new_fd, msg, sizeof(msg)) < 1){
+                printf("Could not send response to client.\n %s\n", strerror(errno));
+            }      
+    
+        }
+        else{
+
+            snprintf(msg, MSG_SIZE, "%d", ACCEPT);
+        
+
+            if(write(new_fd, msg, sizeof(msg)) < 1){
+                printf("Could not send response to client.\n %s\n", strerror(errno));
+            }
+
+            if(read(new_fd, msg, MSG_SIZE) < 1){
+                printf("Could not read client name.\n %s\n", strerror(errno));
+            }
+
+            
+            for(j = 0; j < MAX_CLIENTS; j++){
+
+                if(strcmp(clients[j].name, msg) == 0){
+
+                    printf("Client with this name already exists.\n");
+                    snprintf(msg, MSG_SIZE, "%d", REJECT);
+                    if(write(new_fd, msg, sizeof(msg)) < 1){
+                        printf("Could not send response to client.\n");
+                    }
+                    break;
+
+                }
+
+            }
+
+
+            if(j == MAX_CLIENTS){
+
+
+                strcpy(clients[i].name, msg);
+                clients[i].registered = 1;
+
+                snprintf(msg, MSG_SIZE, "%d", ACCEPT);
+
+                if(write(new_fd, msg, sizeof(msg)) < 1){
+                    printf("Could not send response to client.\n %s\n", strerror(errno));
+                }
+
+                printf("No client with this name OK.\n");
+                
+                for(j = 0; j < MAX_CLIENTS; j++){
+
+                    if(j != i && clients[j].playing == -1 && clients[j].socket_fd != -1){
+
+                        printf("Matchmaking commenced.\n");
+
+                        strcpy(msg, "123456789");
+
+                        clients[i].playing = clients[j].socket_fd;
+                        clients[j].playing = clients[i].socket_fd;
+
+
+                        if(rand() % 2 == 0){
+                            
+                            write(clients[i].socket_fd, msg, MSG_SIZE);
+                            snprintf(msg, MSG_SIZE, "%d", SYMBOLSET);
+                            printf("debug: %s", msg);
+                            write(clients[j].socket_fd, msg, MSG_SIZE);
+
+                        }
+                        else{
+
+                            write(clients[j].socket_fd, msg, MSG_SIZE);
+                            snprintf(msg, MSG_SIZE, "%d", SYMBOLSET);
+                            printf("debug: %s", msg);
+                            write(clients[i].socket_fd, msg, MSG_SIZE);
+
+                        }
+
+                        break;
+
+                    }
+
+                }
+
+
+            }
+            else{
+
+                snprintf(msg, MSG_SIZE, "%d", REJECT);
+
+                if(write(new_fd, msg, sizeof(msg)) < 1){
+                    printf("Could not send response to client.\n %s\n", strerror(errno));
+                }
+
+            }
+
         }
 
-        pthread_mutex_unlock(&mut_clients);
+
+        pthread_mutex_unlock(&lock);
 
     }
 
-    return 0;
+}
+
+void* connection_manager_inet_f(void* args){
+
+    int i, j, new_fd;
+    char msg[MAX_CLIENTS];
+
+    while(1){
+
+        new_fd = accept(socket_inet_fd, NULL, NULL);
+
+        printf("New connection request received.\n");
+
+        pthread_mutex_lock(&lock);
+
+
+        for(i = 0; i < MAX_CLIENTS; i++){
+
+            if(clients[i].socket_fd == -1){
+
+                printf("Found free client slot.\n");
+                clients[i].socket_fd = new_fd;
+                break;
+
+            }
+
+        }
+
+
+        if(i == MAX_CLIENTS){
+
+            printf("No slot found.\n");
+
+            snprintf(msg, MSG_SIZE, "%d", REJECT);
+
+            if(write(new_fd, msg, sizeof(msg)) < 1){
+                printf("Could not send response to client.\n %s\n", strerror(errno));
+            }      
+    
+        }
+        else{
+
+            snprintf(msg, MSG_SIZE, "%d", ACCEPT);
+        
+
+            if(write(new_fd, msg, sizeof(msg)) < 1){
+                printf("Could not send response to client.\n %s\n", strerror(errno));
+            }
+
+            if(read(new_fd, msg, MSG_SIZE) < 1){
+                printf("Could not read client name.\n %s\n", strerror(errno));
+            }
+
+            
+            for(j = 0; j < MAX_CLIENTS; j++){
+
+                if(strcmp(clients[j].name, msg) == 0){
+
+                    printf("Client with this name already exists.\n");
+                    snprintf(msg, MSG_SIZE, "%d", REJECT);
+                    if(write(new_fd, msg, sizeof(msg)) < 1){
+                        printf("Could not send response to client.\n");
+                    }
+                    break;
+
+                }
+
+            }
+
+
+            if(j == MAX_CLIENTS){
+
+
+                strcpy(clients[i].name, msg);
+                clients[i].registered = 1;
+
+                snprintf(msg, MSG_SIZE, "%d", ACCEPT);
+
+                if(write(new_fd, msg, sizeof(msg)) < 1){
+                    printf("Could not send response to client.\n %s\n", strerror(errno));
+                }
+
+                printf("No client with this name OK.\n");
+                
+                for(j = 0; j < MAX_CLIENTS; j++){
+
+                    if(j != i && clients[j].playing == -1 && clients[j].socket_fd != -1){
+
+                        printf("Matchmaking commenced.\n");
+
+                        strcpy(msg, "123456789");
+
+                        clients[i].playing = clients[j].socket_fd;
+                        clients[j].playing = clients[i].socket_fd;
+
+
+                        if(rand() % 2 == 0){
+                            
+                            write(clients[i].socket_fd, msg, MSG_SIZE);
+                            snprintf(msg, MSG_SIZE, "%d", SYMBOLSET);
+                            printf("debug: %s", msg);
+                            write(clients[j].socket_fd, msg, MSG_SIZE);
+
+                        }
+                        else{
+
+                            write(clients[j].socket_fd, msg, MSG_SIZE);
+                            snprintf(msg, MSG_SIZE, "%d", SYMBOLSET);
+                            printf("debug: %s", msg);
+                            write(clients[i].socket_fd, msg, MSG_SIZE);
+
+                        }
+
+                        break;
+
+                    }
+
+                }
+
+
+            }
+            else{
+
+                snprintf(msg, MSG_SIZE, "%d", REJECT);
+
+                if(write(new_fd, msg, sizeof(msg)) < 1){
+                    printf("Could not send response to client.\n %s\n", strerror(errno));
+                }
+
+            }
+
+        }
+
+
+        pthread_mutex_unlock(&lock);
+
+    }
+
 }
 
 void* ping_manager_f(void* args){
 
+    char* msg = calloc(MSG_SIZE, sizeof(char));
+
+    snprintf(msg, MSG_SIZE, "%d", PING);
+
     while(1){
 
         sleep(PING_INTERVAL);
 
-        pthread_mutex_lock(&mut_clients);
+        pthread_mutex_lock(&lock);
 
         for(int i = 0; i < MAX_CLIENTS; i++){
 
-            if(clients[i].registered == 1){
+            if(clients[i].socket_fd != -1){
+                printf("debug: sent ping to client no. %d\n", i);
+
+                if(write(clients[i].socket_fd, msg, MSG_SIZE) < 1){
+                    printf("Could not ping client with id %d\n", i);
+                }
+
                 clients[i].registered = 0;
 
-                write(clients[i].socket_fd, "ping", 4);
             }
 
         }
 
-        pthread_mutex_unlock(&mut_clients);
+        pthread_mutex_unlock(&lock);
 
-        sleep(PING_INTERVAL);
+        sleep(PING_TIMEOUT);
 
-        pthread_mutex_unlock(&mut_clients);
+        pthread_mutex_lock(&lock);
 
         for(int i = 0; i < MAX_CLIENTS; i++){
 
             if(clients[i].registered == 0 && clients[i].socket_fd != -1){
-                close_client(i);
+
+                strcpy(clients[i].name, "");
+                clients[i].playing = 0;
+                epoll_ctl(epoll_fd, EPOLL_CTL_DEL, clients[i].socket_fd, NULL);
+                clients[i].socket_fd = -1;
+
+                printf("debug: disconnected client no. %d\n", i);
+
             }
 
         }
 
-        pthread_mutex_unlock(&mut_clients);
+        pthread_mutex_unlock(&lock);
 
     }
 
-    return 0;
 }
 
-void* client_manager_f(void* args){
+void* comm_manager_f(void* args){
 
-    struct pollfd* fds = calloc(MAX_CLIENTS, sizeof(struct pollfd));
+    int count;
+    char msg[MSG_SIZE];
 
-    for(int i = 0; i < MAX_CLIENTS; i++){
-        fds[i].events = POLLIN;
-    }
+    epoll_fd = epoll_create1(0);
 
-    int check;
+    struct epoll_event event;
+    event.events = EPOLLIN;
+
+    struct epoll_event* events = (struct epoll_event*) calloc(MAX_CLIENTS, sizeof(struct epoll_event));
+
 
     while(1){
 
-        pthread_mutex_lock(&mut_clients);
+        pthread_mutex_lock(&lock);
 
         for(int i = 0; i < MAX_CLIENTS; i++){
-            fds[i].fd = clients[i].socket_fd;
-        }
 
-        pthread_mutex_unlock(&mut_clients);
-
-        if((check = poll(fds, MAX_CLIENTS, -1)) == -1){
-            error("Client manager fatal error.");
-        }
-
-        for(int i = 0; i < MAX_CLIENTS && check > 0; i++){
-
-            if(!(fds[i].revents ^ POLLIN)){
-                pthread_mutex_lock(&mut_clients);
-
-                process_msg(i);
-
-                pthread_mutex_unlock(&mut_clients);
-
-                check--;
+            if(clients[i].socket_fd != -1){
+                epoll_ctl(epoll_fd, EPOLL_CTL_ADD, clients[i].socket_fd, &event);
             }
-            else if(!(fds[i].revents ^ POLLHUP)){
-                pthread_mutex_lock(&mut_clients);
-
-                close_client(i);
-
-                pthread_mutex_unlock(&mut_clients);
-
-                check--;
+            else{
+                epoll_ctl(epoll_fd, EPOLL_CTL_DEL, clients[i].socket_fd, &event);
             }
 
+            events[i].events = 0;
+
         }
+
+
+        pthread_mutex_unlock(&lock);
+
+        printf("debug: %d\n", 0);
+        count = epoll_wait(epoll_fd, events, MAX_CLIENTS, SERVER_WAIT);
+        printf("debug: %d\n", count);
+
+        pthread_mutex_lock(&lock);
+
+        for(int i = 0; i < MAX_CLIENTS && count > 0; i++){
+
+            if((events[i].events & EPOLLIN) == 1){
+
+                if(read(clients[i].socket_fd, msg, MSG_SIZE) < 1){
+                    printf("Could not read message from client no. %d.\n", i);
+                    count--;
+                    continue;
+                }
+
+                printf("debug: msg from client: %s\n", msg);
+
+                if(atoi(msg) == PING){
+
+                    printf("Received pong message from client no %d.\n", i);
+
+                    clients[i].registered = 1;
+
+                }
+                else if(strlen(msg) == 9){
+
+                    if(write(clients[clients[i].playing].socket_fd, msg, MSG_SIZE) < 1){
+                        
+                        printf("Could not send game state from player no. %d to player no. %d.\n", i, clients[i].playing);
+                        
+                        snprintf(msg, MSG_SIZE, "%d", REJECT);
+
+                        write(clients[i].socket_fd, msg, MSG_SIZE);
+                        write(clients[clients[i].playing].socket_fd, msg, MSG_SIZE);
+                        
+                    }
+
+                    printf("Sent game state from player no. %d to player no. %d.\n", i, clients[i].playing);
+
+                }
+                else{
+
+                    printf("Received invalid message from client no. %d.\n", i);
+
+                }
+
+                count--;
+
+                events[i].events = 0;
+
+            }
+
+        }
+
+
+        pthread_mutex_unlock(&lock);
+
     }
 
-    return 0;
 }
 
+
 int main(int argc, char* argv[]){
-    
+
     atexit(close_server);
     signal(SIGINT, close_server);
 
-    srand(time(NULL));
 
     if(argc != 3){
         error("Invalid number of arguments.");
     }
 
-    inet_port = (in_port_t) atoi(argv[1]);
-    socket_path = argv[2];
+    in_port_t port = (in_port_t) atoi(argv[1]);
+    char* socket_path = argv[2];
 
-    for(int i = 0; i < MAX_CLIENTS; i++){
-        clients[i].active = 0;
-        clients[i].name = '\0';
-        clients[i].registered = 0;
-        clients[i].socket_fd = -1;
-        clients[i].game_partner = -1;
-    }
 
-    setup_server(inet_port, socket_path, &socket_fd);
+    open_server(socket_path, port);
 
-    pthread_t connection_manager;
+
     pthread_t ping_manager;
-    pthread_t client_manager;
+    pthread_t connection_manager;
+    pthread_t connection_manager_inet;
+    pthread_t comm_manager;
 
     pthread_create(&connection_manager, NULL, connection_manager_f, NULL);
+    pthread_create(&connection_manager_inet, NULL, connection_manager_inet_f, NULL);
     pthread_create(&ping_manager, NULL, ping_manager_f, NULL);
-    pthread_create(&client_manager, NULL, client_manager_f, NULL);
+    pthread_create(&comm_manager, NULL, comm_manager_f, NULL);
 
     pthread_join(connection_manager, NULL);
+    pthread_join(connection_manager_inet, NULL);
     pthread_join(ping_manager, NULL);
-    pthread_join(client_manager, NULL);
+    pthread_join(comm_manager, NULL);
+
 
     close_server();
 
+
     return 0;
+
 }

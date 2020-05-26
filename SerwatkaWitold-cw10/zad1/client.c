@@ -1,84 +1,126 @@
+
 #include "common.h"
 
-char* name;
-int connection_type;
-char* server_address;
-in_port_t server_port;
 
 int socket_fd;
-char* server_name;
+int epoll_fd = -1;
+char* game_symbol;
 
-char game_symbol;
 
-//===========CLIENT FUNCTIONS=================//
+void open_client(char* connection_type, char* path, char* name, in_port_t port){
 
-void open_client(int* fd, char* path, char* name){
 
-    struct sockaddr_un addr;
-    strcpy(addr.sun_path, path);
-    addr.sun_family = AF_UNIX;
+    if(strcmp(connection_type, "unix") == 0){
 
-    if((*fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
-        error("Could not create socket.");
-    }   
-    printf("Socket created.\n");
+        struct sockaddr_un addr;
 
-    if(connect(*fd, (struct sockaddr*) &addr, sizeof(addr)) != 0){
-        error("Could not connect to server.");
+        addr.sun_family = AF_UNIX;
+        strcpy(addr.sun_path, path);
+
+        if((socket_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
+            error("Could not create socket.");
+        }
+        printf("Socket successfully created.\n");
+
+        if(connect(socket_fd, (struct sockaddr*) &addr, sizeof(addr)) == -1){
+            error("Could not connect to server.");
+        }
+        printf("Connected to server.\n");
+
     }
-    printf("Connected to server.\n");
+    else{
 
-    struct pollfd* listener = calloc(1, sizeof(struct pollfd));
-    listener->fd = *fd;
-    listener->events = POLLIN;
+        struct sockaddr_in addr;
 
-    poll(listener, 1, -1);
-    char handshake[MSG_LEN];
+        addr.sin_family = AF_INET;
+        addr.sin_addr.s_addr = inet_addr(path);
+        addr.sin_port = htons(port);
 
-    if(read(*fd, handshake, MSG_LEN) < 1){
-        error("Could not receive handshake from server.");
+        if((socket_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
+            error("Could not create socket.");
+        }
+        printf("Socket successfully created.\n");
+
+        if(connect(socket_fd, (struct sockaddr*) &addr, sizeof(addr)) == -1){
+            error("Could not connect to server.");
+        }
+        printf("Connected to server.\n");
+
     }
-    printf("Received handshake from server.\n");
 
-    if(strcmp(handshake, "Client request received.") == 0){
-        printf("Server handshake verified.\n");
+
+    char msg[MSG_SIZE];
+
+    if(read(socket_fd, msg, MSG_SIZE) < 1){
+        error("Could not read server response.");
+    }
+    
+    if(atoi(msg) == REJECT){
+        error("Server full.");
     }
 
-    write(*fd, name, sizeof(name));
+
+    strcpy(msg, name);
+
+    if(write(socket_fd, msg, sizeof(msg)) < 1){
+        error("Could not send client name.");
+    }
+    printf("Client name sent.\n");
+
+    if(read(socket_fd, msg, MSG_SIZE) < 1){
+        error("Could not read server response.");
+    }
+
+    if(atoi(msg) == REJECT){
+        error("Client with choosen name already exists.");
+    }
+    printf("Received name confirmation from server.\n");
 
 }
 
 void close_client(){
-    
-    if(shutdown(socket_fd, SHUT_RDWR) == -1){
-        printf("Unable to shut down socket.\n");
-        printf("%s\n", strerror(errno));
-    }
-    else{
-        printf("Socket shutdown.\n");
+
+    if(socket_fd != -1){
+
+        if(shutdown(socket_fd, SHUT_RDWR) == -1){
+            printf("Could not shutdown socket.\n %s\n", strerror(errno));
+        }
+        else{
+            printf("Socket shutdown.\n");
+        }
+
+        if(close(socket_fd) == -1){
+            printf("Could not close socket.\n %s\n", strerror(errno));
+        }
+        else{
+            printf("Socket closed.\n");
+        }
+
     }
 
-    if(close(socket_fd) == -1){
-        printf("Could not close socket.\n");
-        printf("%s\n", strerror(errno));
+    if(epoll_fd != -1){
+
+        if(close(epoll_fd) == -1){
+            printf("Could not close epoll_fd.\n");
+        }
+        else{
+            printf("Epoll_fd closed.\n");
+        }
+
     }
-    else{
-        printf("Socket closed.\n");
-    }
+
+    printf("Client shutdown.\n");
+
+    exit(EXIT_SUCCESS);
 
 }
 
-//=========GAME FUNCTIONS============//
 
-void visualise_board(char* board){
-
-    if(strlen(board) != 9){
-        error("Invalid board size.");
-    }
+void visualise_board(char* game_state){
 
     for(int i = 0; i < 9; i++){
 
-        printf(" %d ", board[i]);
+        printf(" %d ", game_state[i] - '0');
         
         if(i % 3 != 2){
             printf("|");
@@ -87,132 +129,235 @@ void visualise_board(char* board){
             printf("\n");
 
             if(i != 8){
-                printf("---+---+---\n");;
+                printf("---+---+---\n");
             }
         }
 
     }
+
+}
+
+int check_choice(char* game_state, char* choice){
+
+    if(game_state[atoi(choice) - 1] == 'x' 
+    || game_state[atoi(choice) - 1] == 'o' 
+    || atoi(choice) < 1 
+    || atoi(choice) > 9){
+        return 0;
+    }
+
+    return 1;
+
+}
+
+int is_final(char* game_state, char* symbol){
+
+    int streak1, streak2, streak3;
+
+    for(int i = 0; i < 3; i++){
+
+        streak1 = 0;
+        streak2 = 0;
+        streak3 = 0;
+
+        for(int j = 0; j < 3; j++){
+
+            if(game_state[i + j*3] == symbol[0]){
+                streak1++;
+            }
+
+            if(game_state[i*3 + j] == symbol[0]){
+                streak2++;
+            }
+
+            if(i == 0 && game_state[j + j*3] == symbol[0]){
+                streak3++;
+            }
+
+            if(i == 1 && game_state[(2 - j) + j*3] == symbol[0]){
+                streak3++;
+            }
+
+        }
+
+        if(streak1 == 3 || streak2 == 3 || streak3 == 3){
+            return 1;
+        }
+
+    }
+
+    return 0;
+
+}
+
+void end_game(int is_winner){
+
+    if(is_winner == WINNER){
+        printf("Congratulations! You won the game.\n Client will close automatically in 5 seconds.\n");
+    }
+    else if(is_winner == LOSER){
+        printf("You lost!\n Client will close automatically in 5 seconds.\n");
+    }
+
+    sleep(5);
+    raise(SIGINT);
 
 }
 
 void play(char* game_state){
 
-    visualise_board(game_state);
+    if(strcmp(game_state, "123456789") == 0){
+        game_symbol = "x";
+    }
 
-    printf("It's your turn now, enter the choosen field number.\n");
+    char symbol[16];
+
+    if(strcmp(game_symbol, "x") == 0){
+        strcpy(symbol, "o");
+    }
+    else{
+        strcpy(symbol, "x");
+    }
     
-    char decision[MSG_LEN];
-    scanf("%s", decision);
+    if(is_final(game_state, symbol) == 1){
+        end_game(LOSER);
+    }
+    
+    int is_legal = 0;
+    char* choice = calloc(MSG_SIZE, sizeof(char));
 
-    game_state[atoi(decision) - 1] = game_symbol;
+    do{
+        
+        visualise_board(game_state);
+        
+        printf("Choose a free spot.\n");
+        scanf("%s", choice);
+
+        is_legal = check_choice(game_state, choice);
+        printf("%d\n", is_legal);
+
+    }while(!is_legal);
+
+    game_state[atoi(choice) - 1] = game_symbol[0];
+
+    if(write(socket_fd, game_state, MSG_SIZE) < 1){
+        error("Could not send server response.");
+    }
+    printf("Awaiting opponent's choice.\n");
+
+    if(is_final(game_state, game_symbol) == 1){
+        end_game(WINNER);
+    }
+
+    free(choice);
 
 }
 
-//===========MSG HANDLER=============//
 
-void handle_connection(){
+void* server_listener_f(void* args){
 
-    struct pollfd listener[1];
-    listener[0].fd = socket_fd;
-    listener[0].events = POLLIN;
+    char* msg = (char*) calloc(MSG_SIZE, sizeof(char));
 
-    char buffer[MSG_LEN];
+    if((epoll_fd = epoll_create1(0)) == -1){
+        error("Could not create server listener.");
+    }
+
+    struct epoll_event event;
+    event.events = EPOLLIN;
+
+    if(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, socket_fd, &event) == -1){
+        error("Could not set up server listener.");
+    }
+
 
     while(1){
 
-        buffer[0] = '\0';
+        epoll_wait(epoll_fd, &event, 1, -1);
 
-        poll(listener, 1, -1);
+        printf("debug: received message from server.\n");
 
-        if(read(socket_fd, buffer, sizeof(buffer)) == -1){
-            printf("%d", listener[0].revents & POLLIN);
+        if(read(socket_fd, msg, MSG_SIZE) < 1){
             error("Could not read message from server.");
         }
 
-        if(strcmp(buffer, "") != 0){
-            printf("received message: %s\n", buffer);
-        }
+        if(atoi(msg) == PING){
 
-        if(strcmp(buffer, "ping") == 0){
-            write(socket_fd, "pong", 4);
-        }
-        else if(
-            strcmp(buffer, "Client with this name already exists.") == 0
-            || strcmp(buffer, "Could not find game partner.") == 0
-        ){
-            // error(buffer);
-            printf("%s\n", buffer);
-        }
-        else if(strcmp(buffer, "Game partner found, are you ready?") == 0){
-            printf("%s [y/n]\n", buffer);
-            
-            char answer[MSG_LEN];
-            scanf("%s", answer);
+            printf("debug: received ping msg from server.\n");
 
-            write(socket_fd, answer, strlen(answer));
-            
-            answer[0] = '\0';
-            buffer[0] = '\0';
-
-            poll(listener, 1, -1);
-
-            read(socket_fd, buffer, MSG_LEN);
-
-            if(strcmp(buffer, "x") == 0){
-                game_symbol = 'x';
-                printf("You begin! Your symbol is: x\n");
-                play("123456789");
+            if(write(socket_fd, msg, MSG_SIZE) < 1){
+                error("Could not send server response.");
             }
-            else{
-                game_symbol = 'o';
-                printf("Waiting for opponent to finish turn. Your symbol is: o\n");
-            }
+
         }
-        else if (strlen(buffer) == 9){
-            play(buffer);
-            
-            write(socket_fd, buffer, sizeof(buffer));
+        else if(atoi(msg) == REJECT){
+
+            raise(SIGINT);
+
+        }
+        else if(atoi(msg) == SYMBOLSET){
+
+            game_symbol = "o";
+
+        }
+        else if(strlen(msg) == 9){
+
+            play(msg);
+
+        }
+        else{
+
+            error("Invalid server message.\n");
+
         }
 
     }
 
-    return;
 }
+
 
 int main(int argc, char* argv[]){
 
     atexit(close_client);
     signal(SIGINT, close_client);
 
-    if(strcmp(argv[2], "unix") == 0){
+
+    char* name;
+    char* connection_type;
+    char* server_path;
+    int port = 0;
+
+    if(argc == 4){
+
+        name = argv[1];
+        connection_type = argv[2];
+        server_path = argv[3];
         
-        if(argc != 4){
-            error("Invalid number of arguments.");
-        }
-
+    }
+    else if(argc == 5){
+        
         name = argv[1];
-        connection_type = AF_UNIX;
-        server_address = argv[3];
+        connection_type = argv[2];
+        server_path = argv[3];
+        port = atoi(argv[4]);
 
     }
-    else if(strcmp(argv[2], "inet") == 0){
-
-        if(argc != 5){
-            error("Invalid number of arguments.");
-        }
-
-        name = argv[1];
-        connection_type = AF_INET;
-        server_address = argv[3];
-        server_port = (in_port_t) atoi(argv[4]);
-
+    else{
+        error("Invalid number of arguments.");
     }
 
-    open_client(&socket_fd, server_address, name);
 
-    handle_connection();
+    open_client(connection_type, server_path, name, port);
+
+
+    pthread_t server_listener;
+
+    pthread_create(&server_listener, NULL, server_listener_f, NULL);
+
+    pthread_join(server_listener, NULL);
+
 
     close_client();
+
 
     return 0;
 
