@@ -14,6 +14,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <sys/epoll.h>
+#include <netinet/in.h>
 
 //libs for threading
 #include <pthread.h>
