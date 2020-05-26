@@ -21,13 +21,13 @@
 //constants definitions
 #define UNIX_PATH_MAX 108
 #define LOSER 0
-#define WINNTER 1
+#define WINNER 1
 
 //settings
 #define MAX_CLIENTS 16
 #define MSG_SIZE 256
-#define PING_INTERVAL 10
-#define PING_TIMEOUT 10
+#define PING_INTERVAL 60
+#define PING_TIMEOUT 30
 #define SERVER_WAIT 5000
 
 //message types

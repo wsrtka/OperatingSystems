@@ -70,7 +70,7 @@ void close_server(){
 void* connection_manager_f(void* args){
 
     int i, j, new_fd;
-    char* msg = (char*) calloc(MSG_SIZE, sizeof(char));
+    char msg[MAX_CLIENTS];
 
     while(1){
 
@@ -114,9 +114,6 @@ void* connection_manager_f(void* args){
                 printf("Could not send response to client.\n %s\n", strerror(errno));
             }
 
-            free(msg);
-            char* msg = (char*) calloc(MSG_SIZE, sizeof(char));
-
             if(read(new_fd, msg, MSG_SIZE) < 1){
                 printf("Could not read client name.\n %s\n", strerror(errno));
             }
@@ -150,20 +147,25 @@ void* connection_manager_f(void* args){
                     printf("Could not send response to client.\n %s\n", strerror(errno));
                 }
 
+                printf("No client with this name OK.\n");
                 
                 for(j = 0; j < MAX_CLIENTS; j++){
 
                     if(j != i && clients[j].playing == -1 && clients[j].socket_fd != -1){
 
-                        msg = "123456789";
+                        printf("Matchmaking commenced.\n");
+
+                        strcpy(msg, "123456789");
 
                         clients[i].playing = clients[j].socket_fd;
                         clients[j].playing = clients[i].socket_fd;
+
 
                         if(rand() % 2 == 0){
                             
                             write(clients[i].socket_fd, msg, MSG_SIZE);
                             snprintf(msg, MSG_SIZE, "%d", SYMBOLSET);
+                            printf("debug: %s", msg);
                             write(clients[j].socket_fd, msg, MSG_SIZE);
 
                         }
@@ -171,6 +173,7 @@ void* connection_manager_f(void* args){
 
                             write(clients[j].socket_fd, msg, MSG_SIZE);
                             snprintf(msg, MSG_SIZE, "%d", SYMBOLSET);
+                            printf("debug: %s", msg);
                             write(clients[i].socket_fd, msg, MSG_SIZE);
 
                         }
@@ -259,7 +262,7 @@ void* ping_manager_f(void* args){
 void* comm_manager_f(void* args){
 
     int count;
-    char* msg = (char*) calloc(MAX_CLIENTS, sizeof(char));
+    char msg[MSG_SIZE];
 
     epoll_fd = epoll_create1(0);
 
@@ -278,6 +281,9 @@ void* comm_manager_f(void* args){
             if(clients[i].socket_fd != -1){
                 epoll_ctl(epoll_fd, EPOLL_CTL_ADD, clients[i].socket_fd, &event);
             }
+            else{
+                epoll_ctl(epoll_fd, EPOLL_CTL_DEL, clients[i].socket_fd, &event);
+            }
 
             events[i].events = 0;
 
@@ -294,12 +300,15 @@ void* comm_manager_f(void* args){
 
         for(int i = 0; i < MAX_CLIENTS && count > 0; i++){
 
-            if(!(events[i].events ^ EPOLLIN)){
+            if((events[i].events & EPOLLIN) == 1){
 
                 if(read(clients[i].socket_fd, msg, MSG_SIZE) < 1){
                     printf("Could not read message from client no. %d.\n", i);
+                    count--;
                     continue;
                 }
+
+                printf("debug: msg from client: %s\n", msg);
 
                 if(atoi(msg) == PING){
 
@@ -321,12 +330,18 @@ void* comm_manager_f(void* args){
                         
                     }
 
+                    printf("Sent game state from player no. %d to player no. %d.\n", i, clients[i].playing);
+
                 }
                 else{
 
                     printf("Received invalid message from client no. %d.\n", i);
 
                 }
+
+                count--;
+
+                events[i].events = 0;
 
             }
 

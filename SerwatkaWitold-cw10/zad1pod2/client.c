@@ -96,7 +96,7 @@ void visualise_board(char* game_state){
 
     for(int i = 0; i < 9; i++){
 
-        printf(" %d ", atoi(game_state[i]));
+        printf(" %d ", game_state[i] - '0');
         
         if(i % 3 != 2){
             printf("|");
@@ -166,43 +166,9 @@ int is_final(char* game_state, char* symbol){
 
 }
 
-void play(char* game_state){
-
-    if(is_final(game_state, strcmp(game_symbol, "x") == 0 ? "o" : "x") == 1){
-        end_game(LOSER);
-    }
-
-    int is_legal = 0;
-    char* choice = calloc(MSG_SIZE, sizeof(char));
-
-    do{
-
-        visualise_board(game_state);
-
-        printf("Choose a free spot.\n");
-        scanf("%s", choice);
-
-        is_legal = check_choice(game_state, choice);
-
-    }while(!is_legal);
-
-    game_state[atoi(choice) - 1] = game_symbol[0];
-
-    if(write(socket_fd, game_state, MSG_SIZE) < 1){
-        error("Could not send server response.");
-    }
-
-    if(is_final(game_state, game_symbol) == 1){
-        end_game(WINNTER);
-    }
-
-    free(choice);
-
-}
-
 void end_game(int is_winner){
 
-    if(is_winner == WINNTER){
+    if(is_winner == WINNER){
         printf("Congratulations! You won the game.\n Client will close automatically in 5 seconds.\n");
     }
     else if(is_winner == LOSER){
@@ -211,6 +177,55 @@ void end_game(int is_winner){
 
     sleep(5);
     raise(SIGINT);
+
+}
+
+void play(char* game_state){
+
+    if(strcmp(game_state, "123456789") == 0){
+        game_symbol = "x";
+    }
+
+    char symbol[16];
+
+    if(strcmp(game_symbol, "x") == 0){
+        strcpy(symbol, "o");
+    }
+    else{
+        strcpy(symbol, "x");
+    }
+    
+    if(is_final(game_state, symbol) == 1){
+        end_game(LOSER);
+    }
+    
+    int is_legal = 0;
+    char* choice = calloc(MSG_SIZE, sizeof(char));
+
+    do{
+        
+        visualise_board(game_state);
+        
+        printf("Choose a free spot.\n");
+        scanf("%s", choice);
+
+        is_legal = check_choice(game_state, choice);
+        printf("%d\n", is_legal);
+
+    }while(!is_legal);
+
+    game_state[atoi(choice) - 1] = game_symbol[0];
+
+    if(write(socket_fd, game_state, MSG_SIZE) < 1){
+        error("Could not send server response.");
+    }
+    printf("Awaiting opponent's choice.\n");
+
+    if(is_final(game_state, game_symbol) == 1){
+        end_game(WINNER);
+    }
+
+    free(choice);
 
 }
 
@@ -235,8 +250,10 @@ void* server_listener_f(void* args){
 
         epoll_wait(epoll_fd, &event, 1, -1);
 
+        printf("debug: received message from server.\n");
+
         if(read(socket_fd, msg, MSG_SIZE) < 1){
-            error("Could not read message from server.\n");
+            error("Could not read message from server.");
         }
 
         if(atoi(msg) == PING){
