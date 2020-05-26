@@ -26,7 +26,7 @@ void open_server(char* path, in_port_t port){
     addr.sun_family = AF_UNIX;
     strcpy(addr.sun_path, path);
 
-    if((socket_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
+    if((socket_fd = socket(AF_UNIX, SOCK_DGRAM, 0)) == -1){
         error("Could not create socket.");
     }
     printf("Socket succsessfully created.\n");
@@ -35,11 +35,6 @@ void open_server(char* path, in_port_t port){
         error("Could not bind socket.");
     }
     printf("Socket bound.\n");
-
-    if(listen(socket_fd, MAX_CLIENTS) == -1){
-        error("Could not start listening for connections.");
-    }
-    printf("Started listening for client connections.\n");
 
 
     struct hostent * host_entry = gethostbyname("localhost");
@@ -50,7 +45,7 @@ void open_server(char* path, in_port_t port){
     inet_addr.sin_addr.s_addr = host_address.s_addr;
     inet_addr.sin_port = htons(port);
 
-    if((socket_inet_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1){
+    if((socket_inet_fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1){
         error("Could not create inet socket.");
     }
     printf("Inet socket created.\n");
@@ -59,11 +54,6 @@ void open_server(char* path, in_port_t port){
         error("Could not bind inet socket.");
     }
     printf("Inet socket bound.\n");
-
-    if(listen(socket_fd, MAX_CLIENTS) == -1){
-        error("Could not start listening for connections.");
-    }
-    printf("Started listening for inet client connections.\n");
 
 }
 // TODO: close each individual socket and send signal to client

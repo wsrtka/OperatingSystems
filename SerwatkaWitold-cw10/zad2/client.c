@@ -17,7 +17,7 @@ void open_client(char* connection_type, char* path, char* name, in_port_t port){
         addr.sun_family = AF_UNIX;
         strcpy(addr.sun_path, path);
 
-        if((socket_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
+        if((socket_fd = socket(AF_UNIX, SOCK_DGRAM, 0)) == -1){
             error("Could not create socket.");
         }
         printf("Socket successfully created.\n");
